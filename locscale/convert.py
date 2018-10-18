@@ -24,16 +24,10 @@
 # *
 # **************************************************************************
 
-import os
-
 from pyworkflow.utils import Environ, replaceBaseExt
 from pyworkflow.em.convert import ImageHandler
+from locscale.constants import *
 
-# we declarate global constants to multiple usage
-LOCSCALE_HOME_VAR = 'LOCSCALE_HOME'
-EMAN2DIR_VAR = 'EMAN2DIR'
-LOCSCALE_HOME = os.environ.get(LOCSCALE_HOME_VAR, '')
-EMAN2DIR = os.environ.get(EMAN2DIR_VAR, '')
 
 def getVersion():
     version = ''
@@ -42,13 +36,16 @@ def getVersion():
             version = v
     return version
 
+
 def getSupportedVersions():
     return ['0.1']
+
 
 def getSupportedEmanVersions():
     """ LocScale needs eman to work.
     """
     return ['2.11', '2.12', '2.2']
+
 
 def getEmanVersion():
     """ Returns a valid eman version installed or an empty string.
@@ -59,6 +56,7 @@ def getEmanVersion():
             if supV in EMAN2DIR:
                 emanVersion = supV
     return emanVersion
+
 
 def validateEmanVersion(errors):
     """ Validate if eman version is set properly according
@@ -72,8 +70,9 @@ def validateEmanVersion(errors):
                       % ', '.join(getSupportedEmanVersions()))
     return errors
 
+
 def setEmanEnviron():
-    """ Setup the environment variables needed to launch Eman and 
+    """ Setup the environment variables needed to launch Eman and
         use its modules.
     """
     env = Environ(os.environ)
@@ -83,10 +82,11 @@ def setEmanEnviron():
     env.update({'PATH': os.path.join(EMAN2DIR, 'bin'),
                 'LD_LIBRARY_PATH': os.pathsep.join(pathList),
                 'PYTHONPATH': os.pathsep.join(pathList),
-                'EMAN_PYTHON': os.path.join(EMAN2DIR, 'Python/bin/python')}, 
+                'EMAN_PYTHON': os.path.join(EMAN2DIR, 'Python/bin/python')},
                 position=Environ.BEGIN)
 
     os.environ.update(env)
+
 
 def getEmanPythonProgram(program):
     if not 'EMAN_PYTHON' in os.environ:
@@ -97,6 +97,7 @@ def getEmanPythonProgram(program):
     python = os.environ['EMAN_PYTHON']
 
     return python, program
+
 
 def convertBinaryVol(vol, outputDir):
     """ Convert binary volume to a mrc format.
@@ -116,12 +117,9 @@ def convertBinaryVol(vol, outputDir):
         ih.convert(fn, newFn)
         return newFn
 
-    volFn = vol.getFileName()
-    if ':' in volFn:
-        volFn = volFn.split(':')[0]
-    
+    volFn = ih.removeFileType(vol.getFileName())
+
     if not volFn.endswith('.mrc'):
         volFn = convertToMrc(volFn)
 
     return volFn
-    

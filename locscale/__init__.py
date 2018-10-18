@@ -1,6 +1,7 @@
 # **************************************************************************
 # *
 # * Authors:     David Maluenda (dmaluenda@cnb.csic.es)
+# *              Yunior C. Fonseca Reyna (cfonseca@cnb.csic.es)
 # *
 # * Unidad de  Bioinformatica of Centro Nacional de Biotecnologia , CSIC
 # *
@@ -26,21 +27,49 @@
 """
 This package contains the protocols and data for LocScale
 """
-from locscale import *
+
+import pyworkflow.em
+from pyworkflow.utils import Environ
+
 from bibtex import _bibtex # Load bibtex dict with references
+from locscale.protocols import ProtLocScale
+from locscale.constants import *
+
 
 _logo = "locscale_logo.jpg"
 
-from protocol_locscale import ProtLocScale
 
-def validateInstallation():
-    """ This function will be used to check if package is properly installed."""
-    missingPaths = ["%s: %s" % (var, os.environ[var])
-                    for var in [LOCSCALE_HOME_VAR, EMAN2DIR_VAR]
-                    if not os.path.exists(os.environ[var])]
+class Plugin(pyworkflow.em.Plugin):
+    _homeVar = LOCSCALE_HOME_VAR
+    _pathVars = [LOCSCALE_HOME_VAR]
+    _supportedVersions = [V0_1]
 
-    if missingPaths:
-        return ["Required software not found in the system:"] + missingPaths + \
-               ["Try to install the package following: scipion install --help"]
-    else:
-        return [] # No errors
+    @classmethod
+    def _defineVariables(cls):
+        cls._defineEmVar(LOCSCALE_HOME_VAR, 'locscale-0.1')
+
+    @classmethod
+    def getEnviron(cls):
+        """ Setup the environment variables needed to launch resmap. """
+        environ = Environ(os.environ)
+        environ.update({
+            'PATH': Plugin.getHome(),
+            'LD_LIBRARY_PATH': str.join(cls.getHome(), 'locscalelib')
+                           + ":" + cls.getHome(),
+        }, position=Environ.BEGIN)
+
+        return environ
+
+    @classmethod
+    def isVersionActive(cls):
+        return cls.getActiveVersion().startswith(V0_1)
+
+    @classmethod
+    def defineBinaries(cls, env):
+
+        env.addPackage('locscale', version='0.1',
+                       tar='locscale-0.1.tgz',
+                       default=True)
+
+
+pyworkflow.em.Domain.registerPlugin(__name__)

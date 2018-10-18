@@ -1,7 +1,7 @@
 # **************************************************************************
 # *
 # * Authors:    David Maluenda (dmaluenda@cnb.csic.es)
-# *             
+# *
 # * Unidad de  Bioinformatica of Centro Nacional de Biotecnologia , CSIC
 # *
 # * This program is free software; you can redistribute it and/or modify
@@ -24,26 +24,27 @@
 # *
 # **************************************************************************
 
-from locscale import *
+from locscale.convert import *
 from pyworkflow.em import Prot3D
 from pyworkflow.protocol import params
 from pyworkflow.em.data import Volume
 from pyworkflow.utils import removeBaseExt
-                               
+
+
 class ProtLocScale(Prot3D):
-    """ This Protocol computes contrast-enhanced cryo-EM maps 
+    """ This Protocol computes contrast-enhanced cryo-EM maps
         by local amplitude scaling using a reference model.
     """
     _label = 'locscale'
 
-    #--------------------------- DEFINE param functions ------------------------
+    # --------------------------- DEFINE param functions ------------------------
     def _defineParams(self, form):
         form.addSection(label='Input')
 
         form.addParam('inputVolume', params.PointerParam, pointerClass='Volume',
                       important=True, label='Input volume',
                       help='Input EM volume')
-        
+
         form.addParam('refObj', params.PointerParam,
                       label="Reference Volume", pointerClass='Volume',
                       help='Choose a model to take it as refference '
@@ -59,14 +60,14 @@ class ProtLocScale(Prot3D):
                            'Recommended: 7 * average_map_resolution / pixel_size')
 
         form.addParallelSection(threads=0, mpi=4)
-    
-    #--------------------------- INSERT steps functions ------------------------
+
+    # --------------------------- INSERT steps functions ------------------------
     def _insertAllSteps(self):
         self._insertFunctionStep('convertStep')
         self._insertFunctionStep('refineStep')
         self._insertFunctionStep('createOutputStep')
-    
-    #--------------------------- STEPS functions -------------------------------
+
+    # --------------------------- STEPS functions -------------------------------
     def convertStep(self):
         tmpFn = self._getTmpPath()
         self.inputVolFn = convertBinaryVol(self.inputVolume.get(), tmpFn)
@@ -76,7 +77,7 @@ class ProtLocScale(Prot3D):
 
     def refineStep(self):
         """ Run the LocScale program (with EMAN enviroment)
-            to refine a volume. 
+            to refine a volume.
         """
         self.info("Launching LocScale method")
         args = self.prepareParams()
@@ -84,17 +85,17 @@ class ProtLocScale(Prot3D):
         python, program = getEmanPythonProgram('locscale_mpi.py')
         program_args = program + ' ' + args
         self.runJob(python, program_args)
-    
+
     def createOutputStep(self):
-        """ Create the output volume 
+        """ Create the output volume
         """
         outputVolume = Volume()
         outputVolume.setSamplingRate(self.getSampling())
         outputVolume.setFileName(self.getOutputFn())
         self._defineOutputs(outputVolume=outputVolume)
         self._defineTransformRelation(self.inputVolume, outputVolume)
-    
-    #--------------------------- INFO functions --------------------------------
+
+    # --------------------------- INFO functions --------------------------------
     def _validate(self):
         """ We validate if eman is installed and if inputs make sense
         """
@@ -120,11 +121,11 @@ class ProtLocScale(Prot3D):
         warnings = []
 
         if self.binaryMask.hasValue() and \
-            self.binaryMask.get().getDim() != self.inputVolume.get().getDim():
+                self.binaryMask.get().getDim() != self.inputVolume.get().getDim():
             warnings.append('Input volume and binary mask should be '
                             'of the same size')
         return warnings
-    
+
     def _summary(self):
         summary = []
         if not hasattr(self, 'outputVolume'):
@@ -132,23 +133,23 @@ class ProtLocScale(Prot3D):
         else:
             summary.append('We obtained a sharpened volume of the %s '
                            'using %s as reference.'
-                            % (self.getObjectTag('inputVolume'),
-                               self.getObjectTag('refObj')))
+                           % (self.getObjectTag('inputVolume'),
+                              self.getObjectTag('refObj')))
         return summary
 
     def _methods(self):
         methods = []
         methods.append('LocScale has locally scaled the amplitude of the %s '
                        'using %s as reference with a window size of %d.'
-                        % (self.getObjectTag('inputVolume'),
-                           self.getObjectTag('refObj'),
-                           self.patchSize))
+                       % (self.getObjectTag('inputVolume'),
+                          self.getObjectTag('refObj'),
+                          self.patchSize))
         return methods
 
     def _citations(self):
         return ['Jakobi2017']
-    
-    #--------------------------- UTILS functions -------------------------------
+
+    # --------------------------- UTILS functions -------------------------------
     def prepareParams(self):
         """ The input params of the program are as follows (from source):
         '-em', '--em_map', required=True, help='Input filename EM map')
@@ -162,7 +163,7 @@ class ProtLocScale(Prot3D):
         """
 
         # Input volume
-        args  =  "--em_map '%s'" % self.inputVolFn
+        args = "--em_map '%s'" % self.inputVolFn
         self.info("Input file: " + self.inputVolFn)
 
         # Reference volume
@@ -172,7 +173,7 @@ class ProtLocScale(Prot3D):
         # Samplig rate
         args += " --apix %f" % self.getSampling()
         self.info("Samplig rate: %f" % self.getSampling())
-        
+
         # Mask
         if self.binaryMask.hasValue():
             args += " --mask '%s'" % self.maskVolFn
@@ -183,7 +184,7 @@ class ProtLocScale(Prot3D):
         self.info("Window size: %d" % self.patchSize)
 
         # MPI flag
-        if self.numberOfMpi>1:
+        if self.numberOfMpi > 1:
             args += " -mpi"
 
         # Output file
@@ -199,4 +200,6 @@ class ProtLocScale(Prot3D):
         """ Returns the scaled output file name
         """
         outputFnBase = removeBaseExt(self.inputVolFn)
+
+
         return self._getExtraPath(outputFnBase) + '_scaled.mrc'
