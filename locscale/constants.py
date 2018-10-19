@@ -26,12 +26,14 @@
 # **************************************************************************
 import os
 
+from pyworkflow.utils import importFromPlugin
+
 
 # we declarate global constants to multiple usage
 LOCSCALE_HOME_VAR = 'LOCSCALE_HOME'
 EMAN2DIR_VAR = 'EMAN2DIR'
-LOCSCALE_HOME = os.environ.get(LOCSCALE_HOME_VAR, '')
-EMAN2DIR = os.environ.get(EMAN2DIR_VAR, '')
+emanPlugin = importFromPlugin('eman2', 'Plugin')
+emanHome = emanPlugin.getVar(EMAN2DIR_VAR)
 
 # Supported versions
 V0_1 = '0.1'
@@ -39,6 +41,5 @@ V0_1 = '0.1'
 # Emman Supported versions
 V2_11 = '2.11'
 V2_12 = '2.12'
-V2_21 = '2.21'
 
 

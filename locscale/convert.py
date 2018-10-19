@@ -30,9 +30,12 @@ from locscale.constants import *
 
 
 def getVersion():
+    locscalePlugin = importFromPlugin('locscale', 'Plugin')
+    locscaleHome = locscalePlugin.getVar(LOCSCALE_HOME_VAR)
+
     version = ''
     for v in getSupportedVersions():
-        if v in LOCSCALE_HOME:
+        if v in locscaleHome:
             version = v
     return version
 
@@ -44,16 +47,16 @@ def getSupportedVersions():
 def getSupportedEmanVersions():
     """ LocScale needs eman to work.
     """
-    return ['2.11', '2.12', '2.2']
+    return ['2.11', '2.12']
 
 
 def getEmanVersion():
     """ Returns a valid eman version installed or an empty string.
     """
     emanVersion = ''
-    if os.path.exists(EMAN2DIR):
+    if os.path.exists(emanHome):
         for supV in ['eman-'+v for v in getSupportedEmanVersions()]:
-            if supV in EMAN2DIR:
+            if supV in emanHome:
                 emanVersion = supV
     return emanVersion
 
@@ -76,13 +79,13 @@ def setEmanEnviron():
         use its modules.
     """
     env = Environ(os.environ)
-    pathList = [os.path.join(EMAN2DIR, d)
+    pathList = [os.path.join(emanHome, d)
                 for d in ['lib', 'bin', 'extlib/site-packages']]
 
-    env.update({'PATH': os.path.join(EMAN2DIR, 'bin'),
+    env.update({'PATH': os.path.join(emanHome, 'bin'),
                 'LD_LIBRARY_PATH': os.pathsep.join(pathList),
                 'PYTHONPATH': os.pathsep.join(pathList),
-                'EMAN_PYTHON': os.path.join(EMAN2DIR, 'Python/bin/python')},
+                'EMAN_PYTHON': os.path.join(emanHome, 'Python/bin/python')},
                 position=Environ.BEGIN)
 
     os.environ.update(env)
@@ -92,8 +95,11 @@ def getEmanPythonProgram(program):
     if not 'EMAN_PYTHON' in os.environ:
         setEmanEnviron()
 
+    locscalePlugin = importFromPlugin('locscale', 'Plugin')
+    locscaleHome = locscalePlugin.getVar(LOCSCALE_HOME_VAR)
     # locscale scripts are in $LOCSCALE_HOME/source
-    program = os.path.join(LOCSCALE_HOME, 'source', program)
+
+    program = os.path.join(locscaleHome, 'source', program)
     python = os.environ['EMAN_PYTHON']
 
     return python, program
