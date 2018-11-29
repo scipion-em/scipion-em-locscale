@@ -31,9 +31,9 @@ from pyworkflow.utils import importFromPlugin
 
 # we declarate global constants to multiple usage
 LOCSCALE_HOME_VAR = 'LOCSCALE_HOME'
-EMAN2DIR_VAR = 'EMAN2DIR'
+EMAN2_12DIR = 'EMAN2_12DIR'
 emanPlugin = importFromPlugin('eman2', 'Plugin')
-emanHome = emanPlugin.getVar(EMAN2DIR_VAR)
+emanHome = emanPlugin.getVar(EMAN2_12DIR)
 
 # Supported versions
 V0_1 = '0.1'
