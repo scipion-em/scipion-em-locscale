@@ -24,7 +24,6 @@
 # *  e-mail address 'scipion@cnb.csic.es'
 # *
 # **************************************************************************
-import os
 
 from pyworkflow.utils import importFromPlugin
 
@@ -33,11 +32,16 @@ from pyworkflow.utils import importFromPlugin
 LOCSCALE_HOME_VAR = 'LOCSCALE_HOME'
 LOCSCALE_EMAN_HOME_VAR = 'LOCSCALE_EMAN_HOME'
 
+EMAN_HOME_DEFAULT = "eman-2.12"  # FIXME: it should be
+                                 #  importFromPlugin('eman2', 'Plugin').getHome()
+                                 #  but 2.21 fails with MPI...
+
 # Supported versions
 V0_1 = '0.1'
 
-# Emman Supported versions
+# Existing eman versions
 V2_11 = '2.11'
 V2_12 = '2.12'
+V2_21 = '2.21'
 
 

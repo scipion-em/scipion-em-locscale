@@ -24,10 +24,14 @@
 # *
 # **************************************************************************
 
-from pyworkflow.utils import Environ, replaceBaseExt
+import os
+
+from pyworkflow.utils import Environ, replaceBaseExt, importFromPlugin
 from pyworkflow.em.convert import ImageHandler
 from locscale.constants import *
 from locscale import Plugin
+
+emanPlugin = importFromPlugin("eman2", "Plugin")
 
 
 def getVersion():
@@ -47,7 +51,7 @@ def getSupportedVersions():
 def getSupportedEmanVersions():
     """ LocScale needs eman to work.
     """
-    return ['2.11', '2.12']
+    return [V2_11, V2_12]
 
 
 def getEmanVersion():
@@ -67,12 +71,13 @@ def validateEmanVersion(errors):
         errors: a list that will be used to add the error message.
     """
     if getEmanVersion() == '':
-        errors.append('Eman (v: %s) is needed to execute this protocol'
+        errors.append('Eman (v: %s) is needed to execute this protocol. '
+                      'Install one of them (or active it)'
                       % ', '.join(getSupportedEmanVersions()))
     return errors
 
 
-def setEmanEnviron():
+def getEmanEnviron():
     """ Setup the environment variables needed to launch Eman and
         use its modules.
     """
@@ -83,23 +88,19 @@ def setEmanEnviron():
 
     env.update({'PATH': os.path.join(emanHome, 'bin'),
                 'LD_LIBRARY_PATH': os.pathsep.join(pathList),
-                'PYTHONPATH': os.pathsep.join(pathList),
-                'EMAN_PYTHON': os.path.join(emanHome, 'Python/bin/python')},
-                position=Environ.BEGIN)
+                'PYTHONPATH': os.pathsep.join(pathList)},
+               position=Environ.BEGIN)
 
-    os.environ.update(env)
-
+    return env
 
 def getEmanPythonProgram(program):
-    if not 'EMAN_PYTHON' in os.environ:
-        setEmanEnviron()
-    locscaleHome = Plugin.getVar(LOCSCALE_HOME_VAR)
+    env = getEmanEnviron()  # FIXME: This should be emanPlugin.getEnviron(), but MPI fails...
+
     # locscale scripts are in $LOCSCALE_HOME/source
+    program = os.path.join(Plugin.getHome(), 'source', program)
+    python = emanPlugin.getProgram('', True).split(' ')[0]
 
-    program = os.path.join(locscaleHome, 'source', program)
-    python = os.environ['EMAN_PYTHON']
-
-    return python, program
+    return python, program, env
 
 
 def convertBinaryVol(vol, outputDir):

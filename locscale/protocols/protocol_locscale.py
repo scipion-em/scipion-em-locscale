@@ -30,6 +30,8 @@ from pyworkflow.protocol import params
 from pyworkflow.em.data import Volume
 from pyworkflow.utils import removeBaseExt
 
+emanPlugin = importFromPlugin("eman2", "Plugin")
+
 
 class ProtLocScale(Prot3D):
     """ This Protocol computes contrast-enhanced cryo-EM maps
@@ -82,9 +84,9 @@ class ProtLocScale(Prot3D):
         self.info("Launching LocScale method")
         args = self.prepareParams()
 
-        python, program = getEmanPythonProgram('locscale_mpi.py')
-        program_args = program + ' ' + args
-        self.runJob(python, program_args)
+        python, program, env = getEmanPythonProgram('locscale_mpi.py')
+        program_args = "%s %s" % (program, args)
+        self.runJob(python, program_args, env=env)
 
     def createOutputStep(self):
         """ Create the output volume
