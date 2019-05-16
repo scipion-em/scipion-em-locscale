@@ -2,7 +2,7 @@
 LOCSCALE PLUGIN
 ===============
 
-This sub-package contains data and protocol classes to use Locscale within the Scipion framework
+This sub-package contains data and protocol classes to use Locscale within the Scipion framework.  The package implements a general procedure for local sharpening of cryo-EM density maps based on prior knowledge of an atomic reference structure. The procedure optimizes contrast of cryo-EM densities by amplitude scaling against the radially averaged local falloff estimated from a windowed reference model.
 
 
 =====
