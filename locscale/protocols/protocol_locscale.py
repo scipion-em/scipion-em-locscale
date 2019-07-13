@@ -24,32 +24,35 @@
 # *
 # **************************************************************************
 
-from locscale.convert import *
 from pyworkflow.em import Prot3D
 from pyworkflow.protocol import params
 from pyworkflow.em.data import Volume
 from pyworkflow.utils import removeBaseExt
 
+from locscale.convert import *
+
 emanPlugin = importFromPlugin("eman2", "Plugin")
 
 
 class ProtLocScale(Prot3D):
-    """ This Protocol computes contrast-enhanced cryo-EM maps
+    """ This protocol computes contrast-enhanced cryo-EM maps
         by local amplitude scaling using a reference model.
     """
-    _label = 'locscale'
+    _label = 'local sharpening'
 
-    # --------------------------- DEFINE param functions ------------------------
+    # --------------------------- DEFINE param functions ----------------------
     def _defineParams(self, form):
         form.addSection(label='Input')
 
-        form.addParam('inputVolume', params.PointerParam, pointerClass='Volume',
+        form.addParam('inputVolume', params.PointerParam,
+                      pointerClass='Volume',
                       important=True, label='Input volume',
                       help='Input EM volume')
 
         form.addParam('refObj', params.PointerParam,
-                      label="Reference Volume", pointerClass='Volume',
-                      help='Choose a model to take it as refference '
+                      label="Reference Volume",
+                      pointerClass='Volume',
+                      help='Choose a model to take it as reference '
                            '(usually this volume should come from a PDB).')
 
         form.addParam('binaryMask', params.PointerParam,
@@ -57,19 +60,21 @@ class ProtLocScale(Prot3D):
                       label='3D mask', allowsNull=True,
                       help='Binary mask (optional)')
 
-        form.addParam('patchSize', params.IntParam, label='Patch size',
+        form.addParam('patchSize', params.IntParam,
+                      label='Patch size',
                       help='Window size for local scale.\n'
-                           'Recommended: 7 * average_map_resolution / pixel_size')
+                           'Recommended: 7 * '
+                           'average_map_resolution / pixel_size')
 
-        form.addParallelSection(threads=0, mpi=4)
+        form.addParallelSection(threads=0, mpi=3)
 
-    # --------------------------- INSERT steps functions ------------------------
+    # --------------------------- INSERT steps functions ----------------------
     def _insertAllSteps(self):
         self._insertFunctionStep('convertStep')
         self._insertFunctionStep('refineStep')
         self._insertFunctionStep('createOutputStep')
 
-    # --------------------------- STEPS functions -------------------------------
+    # --------------------------- STEPS functions -----------------------------
     def convertStep(self):
         tmpFn = self._getTmpPath()
         self.inputVolFn = convertBinaryVol(self.inputVolume.get(), tmpFn)
@@ -97,7 +102,7 @@ class ProtLocScale(Prot3D):
         self._defineOutputs(outputVolume=outputVolume)
         self._defineTransformRelation(self.inputVolume, outputVolume)
 
-    # --------------------------- INFO functions --------------------------------
+    # --------------------------- INFO functions ------------------------------
     def _validate(self):
         """ We validate if eman is installed and if inputs make sense
         """
@@ -199,9 +204,7 @@ class ProtLocScale(Prot3D):
         return self.inputVolume.get().getSamplingRate()
 
     def getOutputFn(self):
-        """ Returns the scaled output file name
-        """
+        """ Returns the scaled output file name. """
         outputFnBase = removeBaseExt(self.inputVolFn)
-
 
         return self._getExtraPath(outputFnBase) + '_scaled.mrc'
