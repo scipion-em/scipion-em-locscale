@@ -83,7 +83,7 @@ def getEmanPythonProgram(program):
 
     # locscale scripts are in $LOCSCALE_HOME/source
     program = os.path.join(Plugin.getHome(), 'source', program)
-    python = emanPlugin.getProgram('', True).split(' ')[0]
+    python = os.path.join(Plugin.getVar(LOCSCALE_EMAN_HOME), 'bin', 'python')
 
     return python, program, env
 
