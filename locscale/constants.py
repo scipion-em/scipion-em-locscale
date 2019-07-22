@@ -29,7 +29,6 @@ from pyworkflow.utils import importFromPlugin
 
 
 LOCSCALE_HOME = 'LOCSCALE_HOME'
-LOCSCALE_EMAN_HOME = 'LOCSCALE_EMAN_HOME'
 
 # --- Eman2 dependencies ---
 emanPlugin = importFromPlugin('eman2', 'Plugin')

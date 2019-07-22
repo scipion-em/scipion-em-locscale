@@ -26,13 +26,12 @@
 
 import os
 
-from pyworkflow.utils import Environ, replaceBaseExt, importFromPlugin
+from eman2 import EMAN2_HOME
+from pyworkflow.utils import replaceBaseExt
 from pyworkflow.em.convert import ImageHandler
 
 from locscale.constants import *
 from locscale import Plugin
-
-emanPlugin = importFromPlugin("eman2", "Plugin")
 
 
 def getVersion():
@@ -58,7 +57,7 @@ def getSupportedEmanVersions():
 def getEmanVersion():
     """ Returns a valid eman version installed or an empty string.
     """
-    emanVersion = Plugin.getVar(LOCSCALE_EMAN_HOME)
+    emanVersion = emanPlugin.getVar(EMAN2_HOME)
     if os.path.exists(emanVersion):
         return emanVersion
     return ''
@@ -82,8 +81,8 @@ def getEmanPythonProgram(program):
     env = emanPlugin.getEnviron()
 
     # locscale scripts are in $LOCSCALE_HOME/source
-    program = os.path.join(Plugin.getHome(), 'source', program)
-    python = os.path.join(Plugin.getVar(LOCSCALE_EMAN_HOME), 'bin', 'python')
+    program = Plugin.getHome('source', program)
+    python = emanPlugin.getProgram('', True).split(' ')[0]
 
     return python, program, env
 

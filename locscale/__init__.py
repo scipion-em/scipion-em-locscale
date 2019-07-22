@@ -45,8 +45,6 @@ class Plugin(pyworkflow.em.Plugin):
     @classmethod
     def _defineVariables(cls):
         cls._defineEmVar(LOCSCALE_HOME, 'locscale-0.1')
-        cls._defineEmVar(LOCSCALE_EMAN_HOME, 'eman-2.3')
-
 
     @classmethod
     def getEnviron(cls):

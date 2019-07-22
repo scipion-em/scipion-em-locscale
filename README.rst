@@ -39,7 +39,7 @@ Default installation path assumed is ``software/em/locscale-0.1``,
 if you want to change it, set *LOCSCALE_HOME* in ``scipion.conf``
 file to the folder where the LocScale is installed.
 LocScale uses EMAN2 libraries, so you need to provide existing EMAN2
-installation path by setting *LOCSCALE_EMAN_HOME* variable
+installation path by setting *EMAN2_HOME* variable
 (default eman-2.3) in the config file.
 
 Note: **mpi4py** will be installed in the Eman's python
