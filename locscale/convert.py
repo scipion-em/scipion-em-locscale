@@ -26,7 +26,6 @@
 
 import os
 
-from eman2 import EMAN2_HOME
 from pyworkflow.utils import replaceBaseExt
 from pyworkflow.em.convert import ImageHandler
 
@@ -57,9 +56,9 @@ def getSupportedEmanVersions():
 def getEmanVersion():
     """ Returns a valid eman version installed or an empty string.
     """
-    emanVersion = emanPlugin.getVar(EMAN2_HOME)
+    emanVersion = emanPlugin.getHome()
     if os.path.exists(emanVersion):
-        return emanVersion
+        return emanVersion.split('-')[-1]
     return ''
 
 
@@ -70,7 +69,7 @@ def validateEmanVersion(errors):
         protocol: the input protocol calling to validate
         errors: a list that will be used to add the error message.
     """
-    if getEmanVersion() == '':
+    if getEmanVersion() not in getSupportedEmanVersions():
         errors.append('EMAN2 is needed to execute this protocol. '
                       'Install one of the following versions: %s.'
                       % ', '.join(getSupportedEmanVersions()))
