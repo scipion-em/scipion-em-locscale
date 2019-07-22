@@ -26,15 +26,17 @@
 
 import os
 
-from pyworkflow.utils import replaceBaseExt
+from pyworkflow.utils import Environ, replaceBaseExt, importFromPlugin
 from pyworkflow.em.convert import ImageHandler
 
 from locscale.constants import *
 from locscale import Plugin
 
+emanPlugin = importFromPlugin("eman2", "Plugin")
+
 
 def getVersion():
-    locscaleHome = Plugin.getVar(LOCSCALE_HOME_VAR)
+    locscaleHome = Plugin.getVar(LOCSCALE_HOME)
 
     version = ''
     for v in getSupportedVersions():
@@ -50,13 +52,13 @@ def getSupportedVersions():
 def getSupportedEmanVersions():
     """ LocScale needs eman to work.
     """
-    return [V2_11, V2_12, V2_3]
+    return [V2_21, V2_3]
 
 
 def getEmanVersion():
     """ Returns a valid eman version installed or an empty string.
     """
-    emanVersion = Plugin.getVar(LOCSCALE_EMAN_HOME_VAR)
+    emanVersion = Plugin.getVar(LOCSCALE_EMAN_HOME)
     if os.path.exists(emanVersion):
         return emanVersion
     return ''
@@ -70,8 +72,8 @@ def validateEmanVersion(errors):
         errors: a list that will be used to add the error message.
     """
     if getEmanVersion() == '':
-        errors.append('Eman (v: %s) is needed to execute this protocol. '
-                      'Install one of them (or active it)'
+        errors.append('EMAN2 is needed to execute this protocol. '
+                      'Install one of the following versions: %s.'
                       % ', '.join(getSupportedEmanVersions()))
     return errors
 

@@ -1,3 +1,4 @@
+# coding: latin-1
 # **************************************************************************
 # *
 # * Authors:     David Maluenda (dmaluenda@cnb.csic.es)
@@ -24,9 +25,9 @@
 # *
 # **************************************************************************
 
-_bibtexStr = """
+"""
 
-@Article{Jakobi2017,
+@article{Jakobi2017,
   Title                    = {Model-based local density sharpening of cryo-EM maps},
   Author                   = {Jakobi, Arjen J and Wilmanns, Matthias and Sachse, Carsten},
   Journal                  = {eLife},
@@ -41,9 +42,3 @@ _bibtexStr = """
 }
 
 """
-
-from pyworkflow.utils import parseBibTex
-
-_bibtex = parseBibTex(_bibtexStr)  
-
-
