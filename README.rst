@@ -24,3 +24,6 @@ Alternatively, in devel mode:
 .. code-block::
 
     scipion installp -p local/path/to/scipion-em-locscale --devel
+
+
+Note: **mpi4py** will be installed in the Eman's python

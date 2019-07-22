@@ -26,12 +26,11 @@
 
 import os
 
-from pyworkflow.utils import Environ, replaceBaseExt, importFromPlugin
+from pyworkflow.utils import replaceBaseExt
 from pyworkflow.em.convert import ImageHandler
+
 from locscale.constants import *
 from locscale import Plugin
-
-emanPlugin = importFromPlugin("eman2", "Plugin")
 
 
 def getVersion():
@@ -51,7 +50,7 @@ def getSupportedVersions():
 def getSupportedEmanVersions():
     """ LocScale needs eman to work.
     """
-    return [V2_11, V2_12]
+    return [V2_11, V2_12, V2_3]
 
 
 def getEmanVersion():
@@ -77,24 +76,8 @@ def validateEmanVersion(errors):
     return errors
 
 
-def getEmanEnviron():
-    """ Setup the environment variables needed to launch Eman and
-        use its modules.
-    """
-    env = Environ(os.environ)
-    emanHome = getEmanVersion()
-    pathList = [os.path.join(emanHome, d)
-                for d in ['lib', 'bin', 'extlib/site-packages']]
-
-    env.update({'PATH': os.path.join(emanHome, 'bin'),
-                'LD_LIBRARY_PATH': os.pathsep.join(pathList),
-                'PYTHONPATH': os.pathsep.join(pathList)},
-               position=Environ.BEGIN)
-
-    return env
-
 def getEmanPythonProgram(program):
-    env = getEmanEnviron()  # FIXME: This should be emanPlugin.getEnviron(), but MPI fails...
+    env = emanPlugin.getEnviron()
 
     # locscale scripts are in $LOCSCALE_HOME/source
     program = os.path.join(Plugin.getHome(), 'source', program)

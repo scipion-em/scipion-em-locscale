@@ -72,6 +72,10 @@ class Plugin(pyworkflow.em.Plugin):
 
         env.addPackage('locscale', version='0.1',
                        tar='locscale-0.1.tgz',
+                       commands=[('echo "installing mpi4py in eman2" ; '
+                                  'export %s ; pip install mpi4py' % EMAN_ENV_STR,
+                                  emanPlugin.getHome('lib', 'python2.7',
+                                                     'site-packages', 'mpi4py'))],
                        default=True)
 
 
