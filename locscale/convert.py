@@ -26,16 +26,15 @@
 
 import os
 
-from pyworkflow.utils import Environ, replaceBaseExt, importFromPlugin
+from pyworkflow.utils import replaceBaseExt
 from pyworkflow.em.convert import ImageHandler
+
 from locscale.constants import *
 from locscale import Plugin
 
-emanPlugin = importFromPlugin("eman2", "Plugin")
-
 
 def getVersion():
-    locscaleHome = Plugin.getVar(LOCSCALE_HOME_VAR)
+    locscaleHome = Plugin.getVar(LOCSCALE_HOME)
 
     version = ''
     for v in getSupportedVersions():
@@ -51,15 +50,15 @@ def getSupportedVersions():
 def getSupportedEmanVersions():
     """ LocScale needs eman to work.
     """
-    return [V2_11, V2_12]
+    return [V2_21, V2_3]
 
 
 def getEmanVersion():
     """ Returns a valid eman version installed or an empty string.
     """
-    emanVersion = Plugin.getVar(LOCSCALE_EMAN_HOME_VAR)
+    emanVersion = emanPlugin.getHome()
     if os.path.exists(emanVersion):
-        return emanVersion
+        return emanVersion.split('-')[-1]
     return ''
 
 
@@ -70,34 +69,18 @@ def validateEmanVersion(errors):
         protocol: the input protocol calling to validate
         errors: a list that will be used to add the error message.
     """
-    if getEmanVersion() == '':
-        errors.append('Eman (v: %s) is needed to execute this protocol. '
-                      'Install one of them (or active it)'
+    if getEmanVersion() not in getSupportedEmanVersions():
+        errors.append('EMAN2 is needed to execute this protocol. '
+                      'Install one of the following versions: %s.'
                       % ', '.join(getSupportedEmanVersions()))
     return errors
 
 
-def getEmanEnviron():
-    """ Setup the environment variables needed to launch Eman and
-        use its modules.
-    """
-    env = Environ(os.environ)
-    emanHome = getEmanVersion()
-    pathList = [os.path.join(emanHome, d)
-                for d in ['lib', 'bin', 'extlib/site-packages']]
-
-    env.update({'PATH': os.path.join(emanHome, 'bin'),
-                'LD_LIBRARY_PATH': os.pathsep.join(pathList),
-                'PYTHONPATH': os.pathsep.join(pathList)},
-               position=Environ.BEGIN)
-
-    return env
-
 def getEmanPythonProgram(program):
-    env = getEmanEnviron()  # FIXME: This should be emanPlugin.getEnviron(), but MPI fails...
+    env = emanPlugin.getEnviron()
 
     # locscale scripts are in $LOCSCALE_HOME/source
-    program = os.path.join(Plugin.getHome(), 'source', program)
+    program = Plugin.getHome('source', program)
     python = emanPlugin.getProgram('', True).split(' ')[0]
 
     return python, program, env

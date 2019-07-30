@@ -19,12 +19,13 @@
 # *
 # *  All comments concerning this program package may be sent to the
 # *  e-mail address 'scipion@cnb.csic.es'
-# ***************************************************************************/
+# ***************************************************************************
 
 from pyworkflow.tests import BaseTest, setupTestProject, DataSet
 from pyworkflow.em.protocol import ProtImportVolumes, ProtImportMask
-from locscale.protocols import ProtLocScale
 from pyworkflow.utils import magentaStr
+
+from locscale.protocols import ProtLocScale
 
 
 class TestProtLocscale(BaseTest):
@@ -33,9 +34,7 @@ class TestProtLocscale(BaseTest):
         setupTestProject(cls)
         cls.dataSet = DataSet.getDataSet('xmipp_tutorial')
 
-        #
         # Imports
-        #
         print magentaStr("\n==> Importing data - Input data")
         new = cls.proj.newProtocol  # short notation
         launch = cls.proj.launchProtocol
@@ -78,7 +77,7 @@ class TestProtLocscale(BaseTest):
         """
         print magentaStr("\n==> Testing locscale:")
 
-        def launchTest(label, vol, ref, mask=None, mpi=4):
+        def launchTest(label, vol, ref, mask=None, mpi=3):
             print magentaStr("\nTest %s:" % label)
             pLocScale = self.proj.newProtocol(ProtLocScale,
                                               objLabel='locscale - ' + label,

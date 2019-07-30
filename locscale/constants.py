@@ -28,20 +28,21 @@
 from pyworkflow.utils import importFromPlugin
 
 
-# we declarate global constants to multiple usage
-LOCSCALE_HOME_VAR = 'LOCSCALE_HOME'
-LOCSCALE_EMAN_HOME_VAR = 'LOCSCALE_EMAN_HOME'
+LOCSCALE_HOME = 'LOCSCALE_HOME'
 
-EMAN_HOME_DEFAULT = "eman-2.12"  # FIXME: it should be
-                                 #  importFromPlugin('eman2', 'Plugin').getHome()
-                                 #  but 2.21 fails with MPI...
+# --- Eman2 dependencies ---
+emanPlugin = importFromPlugin('eman2', 'Plugin')
+
+# to set the Eman2 environ in a bash-shell
+EMAN_ENV_STR = ' '.join(['%s=%s' % (var, emanPlugin.getEnviron()[var])
+                         for var in ('PATH', 'PYTHONPATH', 'LD_LIBRARY_PATH',
+                                     'SCIPION_MPI_FLAGS')])
+
 
 # Supported versions
 V0_1 = '0.1'
 
 # Existing eman versions
-V2_11 = '2.11'
-V2_12 = '2.12'
 V2_21 = '2.21'
-
+V2_3 = '2.3'
 

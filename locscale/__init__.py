@@ -24,32 +24,27 @@
 # *  e-mail address 'scipion@cnb.csic.es'
 # *
 # **************************************************************************
-"""
-This package contains the protocols and data for LocScale
-"""
 
 import os
 
 import pyworkflow.em
 from pyworkflow.utils import Environ
 
-from bibtex import _bibtex  # Load bibtex dict with references
 from locscale.constants import *
 
 
 _logo = "locscale_logo.jpg"
+_references = ['Jakobi2017']
 
 
 class Plugin(pyworkflow.em.Plugin):
-    _homeVar = LOCSCALE_HOME_VAR
-    _pathVars = [LOCSCALE_HOME_VAR]
+    _homeVar = LOCSCALE_HOME
+    _pathVars = [LOCSCALE_HOME]
     _supportedVersions = [V0_1]
 
     @classmethod
     def _defineVariables(cls):
-        cls._defineEmVar(LOCSCALE_HOME_VAR, 'locscale-0.1')
-        cls._defineEmVar(LOCSCALE_EMAN_HOME_VAR, EMAN_HOME_DEFAULT)
-
+        cls._defineEmVar(LOCSCALE_HOME, 'locscale-0.1')
 
     @classmethod
     def getEnviron(cls):
@@ -58,7 +53,7 @@ class Plugin(pyworkflow.em.Plugin):
         environ.update({
             'PATH': Plugin.getHome(),
             'LD_LIBRARY_PATH': str.join(cls.getHome(), 'locscalelib')
-                           + ":" + cls.getHome(),
+                               + ":" + cls.getHome(),
         }, position=Environ.BEGIN)
 
         return environ
@@ -72,6 +67,10 @@ class Plugin(pyworkflow.em.Plugin):
 
         env.addPackage('locscale', version='0.1',
                        tar='locscale-0.1.tgz',
+                       commands=[('echo ; echo " > Installing mpi4py in eman2" ; '
+                                  'export %s ; pip install mpi4py' % EMAN_ENV_STR,
+                                  emanPlugin.getHome('lib', 'python2.7',
+                                                     'site-packages', 'mpi4py'))],
                        default=True)
 
 
