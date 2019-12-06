@@ -1,3 +1,4 @@
+07-December-2019: Migrated to python3
 1.0.5 - EMAN2.3 support
 1-March-2019 Include protocol.conf to create the source distribution
 * 18-october-2018 First version of Plugin

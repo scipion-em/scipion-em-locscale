@@ -27,7 +27,7 @@
 import os
 
 from pyworkflow.utils import replaceBaseExt
-from pyworkflow.em.convert import ImageHandler
+from pwem.convert import ImageHandler
 
 from locscale.constants import *
 from locscale import Plugin

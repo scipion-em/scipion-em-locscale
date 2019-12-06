@@ -24,14 +24,18 @@
 # *
 # **************************************************************************
 
-from pyworkflow.em import Prot3D
+from pwem.protocols import Prot3D
 from pyworkflow.protocol import params
-from pyworkflow.em.data import Volume
+from pwem.objects import Volume
 from pyworkflow.utils import removeBaseExt
+from pwem import Domain
 
 from locscale.convert import *
 
-emanPlugin = importFromPlugin("eman2", "Plugin")
+try:
+  emanPlugin = Domain.importFromPlugin("eman2", "Plugin", doRaise=True)
+except Exception as e:
+    print("Eman plugin does not installed....You need to install it first.")
 
 
 class ProtLocScale(Prot3D):

@@ -27,7 +27,7 @@
 
 import os
 
-import pyworkflow.em
+import pwem
 from pyworkflow.utils import Environ
 
 from locscale.constants import *
@@ -37,7 +37,7 @@ _logo = "locscale_logo.jpg"
 _references = ['Jakobi2017']
 
 
-class Plugin(pyworkflow.em.Plugin):
+class Plugin(pwem.Plugin):
     _homeVar = LOCSCALE_HOME
     _pathVars = [LOCSCALE_HOME]
     _supportedVersions = [V0_1]
@@ -74,4 +74,4 @@ class Plugin(pyworkflow.em.Plugin):
                        default=True)
 
 
-pyworkflow.em.Domain.registerPlugin(__name__)
+pwem.Domain.registerPlugin(__name__)

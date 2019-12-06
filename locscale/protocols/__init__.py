@@ -24,4 +24,4 @@
 # *
 # **************************************************************************
 
-from protocol_locscale import ProtLocScale
+from .protocol_locscale import ProtLocScale
