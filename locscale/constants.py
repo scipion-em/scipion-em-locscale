@@ -25,13 +25,13 @@
 # *
 # **************************************************************************
 
-from pyworkflow.utils import importFromPlugin
+from pwem import Domain
 
 
 LOCSCALE_HOME = 'LOCSCALE_HOME'
 
 # --- Eman2 dependencies ---
-emanPlugin = importFromPlugin('eman2', 'Plugin')
+emanPlugin = Domain.importFromPlugin('eman2', 'Plugin')
 
 # to set the Eman2 environ in a bash-shell
 EMAN_ENV_STR = ' '.join(['%s=%s' % (var, emanPlugin.getEnviron()[var])
