@@ -30,7 +30,7 @@ import os
 import pwem
 from pyworkflow.utils import Environ
 
-from locscale.constants import *
+from .constants import *
 
 
 _logo = "locscale_logo.jpg"

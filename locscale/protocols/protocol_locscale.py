@@ -30,7 +30,7 @@ from pwem.objects import Volume
 from pyworkflow.utils import removeBaseExt
 from pwem import Domain
 
-from locscale.convert import *
+from ..convert import *
 
 try:
   emanPlugin = Domain.importFromPlugin("eman2", "Plugin", doRaise=True)

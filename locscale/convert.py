@@ -29,8 +29,8 @@ import os
 from pyworkflow.utils import replaceBaseExt
 from pwem.convert import ImageHandler
 
-from locscale.constants import *
-from locscale import Plugin
+from .constants import *
+from . import Plugin
 
 
 def getVersion():

@@ -25,7 +25,7 @@ from pyworkflow.tests import BaseTest, setupTestProject, DataSet
 from pwem.protocols import ProtImportVolumes, ProtImportMask
 from pyworkflow.utils import magentaStr
 
-from locscale.protocols import ProtLocScale
+from ..protocols import ProtLocScale
 
 
 class TestProtLocscale(BaseTest):
