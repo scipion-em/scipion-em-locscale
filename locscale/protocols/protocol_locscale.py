@@ -33,7 +33,7 @@ from pwem import Domain
 from ..convert import *
 
 try:
-  emanPlugin = Domain.importFromPlugin("eman2", "Plugin", doRaise=True)
+    emanPlugin = Domain.importFromPlugin("eman2", "Plugin", doRaise=True)
 except Exception as e:
     print("Eman plugin does not installed....You need to install it first.")
 
@@ -149,7 +149,7 @@ class ProtLocScale(Prot3D):
         return summary
 
     def _methods(self):
-        methods = []
+        methods = list()
         methods.append('LocScale has locally scaled the amplitude of the %s '
                        'using %s as reference with a window size of %d.'
                        % (self.getObjectTag('inputVolume'),
