@@ -200,6 +200,6 @@ setup(
         'Source': 'https://github.com/scipion-em/scipion-em-locscale/',
     },
     entry_points={
-            'pyworkflow.plugin': 'xmipp3 = xmipp3'
+            'pyworkflow.plugin': 'locscale = locscale'
         },
 )
