@@ -73,5 +73,3 @@ class Plugin(pwem.Plugin):
                                                      'site-packages', 'mpi4py'))],
                        default=True)
 
-
-pwem.Domain.registerPlugin(__name__)
