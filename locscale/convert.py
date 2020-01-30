@@ -27,7 +27,7 @@
 import os
 
 from pyworkflow.utils import replaceBaseExt
-from pwem.convert import ImageHandler
+from pwem.emlib.image import ImageHandler
 
 from .constants import *
 from . import Plugin
