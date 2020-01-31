@@ -112,10 +112,10 @@ class ProtLocScale(Prot3D):
         errors = []
         errors = validateEmanVersion(errors)
 
-        input = self.inputVolume.get()
+        inputVol = self.inputVolume.get()
         reference = self.refObj.get()
-        if input is not None and reference is not None:
-            inputSize = input.getDim()
+        if inputVol is not None and reference is not None:
+            inputSize = inputVol.getDim()
             refSize = reference.getDim()
             refSamp = reference.getSamplingRate()
 
