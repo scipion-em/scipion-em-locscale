@@ -65,11 +65,11 @@ class Plugin(pwem.Plugin):
     @classmethod
     def defineBinaries(cls, env):
 
+        emanmpi4piFlag = "mpi4py-installed"
         env.addPackage('locscale', version='0.1',
                        tar='locscale-0.1.tgz',
-                       commands=[('echo ; echo " > Installing mpi4py in eman2" ; '
-                                  'export %s ; pip install mpi4py' % EMAN_ENV_STR,
-                                  emanPlugin.getHome('lib', 'python2.7',
-                                                     'site-packages', 'mpi4py'))],
+                       commands=[('echo ; echo " > Installing mpi4py in eman2" && '
+                                  'export %s && pip install mpi4py && touch %s' % (EMAN_ENV_STR, emanmpi4piFlag),
+                                  emanPlugin.getHome('lib', 'python2.7', 'site-packages', 'mpi4py'))],
                        default=True)
 
