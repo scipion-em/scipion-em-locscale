@@ -72,4 +72,3 @@ class Plugin(pwem.Plugin):
                                   'export %s && pip install mpi4py && touch %s' % (EMAN_ENV_STR, emanmpi4piFlag),
                                   emanPlugin.getHome('lib', 'python2.7', 'site-packages', 'mpi4py'))],
                        default=True)
-

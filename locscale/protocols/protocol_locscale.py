@@ -34,7 +34,7 @@ from ..convert import *
 try:
     emanPlugin = Domain.importFromPlugin("eman2", "Plugin", doRaise=True)
 except Exception as e:
-    print("Eman plugin does not installed....You need to install it first.")
+    print("Eman plugin not found! You need to install it first.")
 
 
 class ProtLocScale(Prot3D):
@@ -182,7 +182,7 @@ class ProtLocScale(Prot3D):
 
         # Samplig rate
         args += " --apix %f" % self.getSampling()
-        self.info("Samplig rate: %f" % self.getSampling())
+        self.info("Sampling rate: %f" % self.getSampling())
 
         # Mask
         if self.binaryMask.hasValue():
