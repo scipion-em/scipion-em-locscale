@@ -28,7 +28,7 @@
 import os
 
 import pwem
-from pyworkflow.utils import Environ
+import pyworkflow.utils as pwutils
 
 from .constants import *
 
@@ -49,12 +49,12 @@ class Plugin(pwem.Plugin):
     @classmethod
     def getEnviron(cls):
         """ Setup the environment variables needed to launch resmap. """
-        environ = Environ(os.environ)
+        environ = pwutils.Environ(os.environ)
         environ.update({
             'PATH': Plugin.getHome(),
             'LD_LIBRARY_PATH': str.join(cls.getHome(), 'locscalelib')
                                + ":" + cls.getHome(),
-        }, position=Environ.BEGIN)
+        }, position=pwutils.Environ.BEGIN)
 
         return environ
 
@@ -63,8 +63,31 @@ class Plugin(pwem.Plugin):
         return cls.getActiveVersion().startswith(V0_1)
 
     @classmethod
-    def defineBinaries(cls, env):
+    def getEmanPlugin(self):
+        # --- Eman2 dependencies ---
+        try:
+            emanPlugin = Domain.importFromPlugin("eman2", "Plugin",
+                                                 doRaise=True)
+        except Exception as e:
+            print(pwutils.redStr("Eman plugin does not installed....You need to install it "
+                  "first."))
+            return None
+        return emanPlugin
 
+    @classmethod
+    def getEmanDependencies(self):
+        # to set the Eman2 environ in a bash-shell
+        emanPlugin = self.getEmanPlugin()
+        EMAN_ENV_STR = ' '.join(['%s=%s' % (var, emanPlugin.getEnviron()[var])
+                                 for var in
+                                 ('PATH', 'PYTHONPATH', 'LD_LIBRARY_PATH',
+                                  'SCIPION_MPI_FLAGS')])
+        return EMAN_ENV_STR
+
+    @classmethod
+    def defineBinaries(cls, env):
+        emanPlugin = cls.getEmanPlugin()
+        EMAN_ENV_STR = cls.getEmanDependencies()
         emanmpi4piFlag = "mpi4py-installed"
         env.addPackage('locscale', version='0.1',
                        tar='locscale-0.1.tgz',
