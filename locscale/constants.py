@@ -30,14 +30,6 @@ from pwem import Domain
 
 LOCSCALE_HOME = 'LOCSCALE_HOME'
 
-# --- Eman2 dependencies ---
-emanPlugin = Domain.importFromPlugin('eman2', 'Plugin')
-
-# to set the Eman2 environ in a bash-shell
-EMAN_ENV_STR = ' '.join(['%s=%s' % (var, emanPlugin.getEnviron()[var])
-                         for var in ('PATH', 'PYTHONPATH', 'LD_LIBRARY_PATH',
-                                     'SCIPION_MPI_FLAGS')])
-
 
 # Supported versions
 V0_1 = '0.1'
