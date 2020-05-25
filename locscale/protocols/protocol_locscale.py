@@ -24,14 +24,17 @@
 # *
 # **************************************************************************
 
-from pyworkflow.em import Prot3D
+from pwem.protocols import Prot3D
 from pyworkflow.protocol import params
-from pyworkflow.em.data import Volume
+from pwem.objects import Volume
 from pyworkflow.utils import removeBaseExt
 
-from locscale.convert import *
+from ..convert import *
 
-emanPlugin = importFromPlugin("eman2", "Plugin")
+try:
+    emanPlugin = Domain.importFromPlugin("eman2", "Plugin", doRaise=True)
+except Exception as e:
+    print("Eman plugin not found! You need to install it first.")
 
 
 class ProtLocScale(Prot3D):
@@ -109,10 +112,10 @@ class ProtLocScale(Prot3D):
         errors = []
         errors = validateEmanVersion(errors)
 
-        input = self.inputVolume.get()
+        inputVol = self.inputVolume.get()
         reference = self.refObj.get()
-        if input is not None and reference is not None:
-            inputSize = input.getDim()
+        if inputVol is not None and reference is not None:
+            inputSize = inputVol.getDim()
             refSize = reference.getDim()
             refSamp = reference.getSamplingRate()
 
@@ -145,7 +148,7 @@ class ProtLocScale(Prot3D):
         return summary
 
     def _methods(self):
-        methods = []
+        methods = list()
         methods.append('LocScale has locally scaled the amplitude of the %s '
                        'using %s as reference with a window size of %d.'
                        % (self.getObjectTag('inputVolume'),
@@ -179,7 +182,7 @@ class ProtLocScale(Prot3D):
 
         # Samplig rate
         args += " --apix %f" % self.getSampling()
-        self.info("Samplig rate: %f" % self.getSampling())
+        self.info("Sampling rate: %f" % self.getSampling())
 
         # Mask
         if self.binaryMask.hasValue():

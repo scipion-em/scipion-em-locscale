@@ -65,7 +65,7 @@ setup(
     # For a discussion on single-sourcing the version across setup.py and the
     # project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='1.0.5',  # Required
+    version='3.0.0',  # Required
 
     # This is a one-line description or tagline of what your project does. This
     # corresponds to the "Summary" metadata field:
@@ -115,14 +115,14 @@ setup(
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 2.7'
+        'Programming Language :: Python :: 3.5'
     ],
 
     # This field adds keywords for your project which will appear on the
     # project page. What does your project relate to?
     #
     # Note that this is a string of words separated by whitespace, not a list.
-    keywords='scipion electron-microscopy cryo-em structural-biology image-processing scipion-2.0',  # Optional
+    keywords='scipion electron-microscopy cryo-em structural-biology image-processing scipion-3.0',  # Optional
 
     # You can just specify package directories manually here if your project is
     # simple. Or you can use find_packages().
@@ -141,7 +141,7 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    #install_requires=['peppercorn'],  # Optional
+    install_requires=['scipion-em'],  # Optional
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
@@ -199,4 +199,7 @@ setup(
         'Bug Reports': 'https://github.com/scipion-em/scipion-em-locscale/issues',
         'Source': 'https://github.com/scipion-em/scipion-em-locscale/',
     },
+    entry_points={
+            'pyworkflow.plugin': 'locscale = locscale'
+        },
 )

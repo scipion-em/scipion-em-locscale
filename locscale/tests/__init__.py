@@ -24,4 +24,4 @@
 # *
 # **************************************************************************
 
-from test_protocol_locscale import TestProtLocscale
+from .test_protocol_locscale import TestProtLocscale

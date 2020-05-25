@@ -22,10 +22,10 @@
 # ***************************************************************************
 
 from pyworkflow.tests import BaseTest, setupTestProject, DataSet
-from pyworkflow.em.protocol import ProtImportVolumes, ProtImportMask
+from pwem.protocols import ProtImportVolumes, ProtImportMask
 from pyworkflow.utils import magentaStr
 
-from locscale.protocols import ProtLocScale
+from ..protocols import ProtLocScale
 
 
 class TestProtLocscale(BaseTest):
@@ -35,12 +35,12 @@ class TestProtLocscale(BaseTest):
         cls.dataSet = DataSet.getDataSet('xmipp_tutorial')
 
         # Imports
-        print magentaStr("\n==> Importing data - Input data")
+        print(magentaStr("\n==> Importing data - Input data"))
         new = cls.proj.newProtocol  # short notation
         launch = cls.proj.launchProtocol
 
         # Volumes
-        print magentaStr("\nImporting Volumes:")
+        print(magentaStr("\nImporting Volumes:"))
         pImpVolume = new(ProtImportVolumes, samplingRate=1,
                          filesPath=cls.dataSet.getFile('vol2'))
         launch(pImpVolume, wait=True)
@@ -52,7 +52,7 @@ class TestProtLocscale(BaseTest):
         cls.inputVol2 = pImpVolume2.outputVolume
 
         # References
-        print magentaStr("\nImporting References:")
+        print(magentaStr("\nImporting References:"))
         pImpRef = new(ProtImportVolumes, samplingRate=1,
                       filesPath=cls.dataSet.getFile('vol3'))
         launch(pImpRef, wait=True)
@@ -64,7 +64,7 @@ class TestProtLocscale(BaseTest):
         cls.inputRef2 = pImpRef2.outputVolume
 
         # Masks
-        print magentaStr("\nImporting Mask:")
+        print(magentaStr("\nImporting Mask:"))
         pImpMask = new(ProtImportMask,
                        maskPath=cls.dataSet.getFile('mask3d'),
                        samplingRate=1)
@@ -75,10 +75,10 @@ class TestProtLocscale(BaseTest):
         """ Check that an output was generated and the condition is valid.
             In addition, returns the size of the set.
         """
-        print magentaStr("\n==> Testing locscale:")
+        print(magentaStr("\n==> Testing locscale:"))
 
         def launchTest(label, vol, ref, mask=None, mpi=3):
-            print magentaStr("\nTest %s:" % label)
+            print(magentaStr("\nTest %s:" % label))
             pLocScale = self.proj.newProtocol(ProtLocScale,
                                               objLabel='locscale - ' + label,
                                               inputVolume=vol,
