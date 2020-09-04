@@ -32,7 +32,7 @@ import pyworkflow.utils as pwutils
 
 from .constants import *
 
-
+__version__ = '3.0.2'
 _logo = "locscale_logo.jpg"
 _references = ['Jakobi2017']
 
