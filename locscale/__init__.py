@@ -32,7 +32,7 @@ import pyworkflow.utils as pwutils
 
 from .constants import *
 
-__version__ = '3.0.2'
+__version__ = '3.0.3'
 _logo = "locscale_logo.jpg"
 _references = ['Jakobi2017']
 
@@ -68,6 +68,7 @@ class Plugin(pwem.Plugin):
         try:
             emanPlugin = Domain.importFromPlugin("eman2", "Plugin",
                                                  doRaise=True)
+            emanPlugin._defineVariables()
         except Exception as e:
             print(pwutils.redStr("Eman plugin does not installed....You need to install it "
                   "first."))
@@ -93,5 +94,6 @@ class Plugin(pwem.Plugin):
                        tar='locscale-0.1.tgz',
                        commands=[('echo ; echo " > Installing mpi4py in eman2" && '
                                   'export %s && pip install mpi4py && touch %s' % (EMAN_ENV_STR, emanmpi4piFlag),
-                                  emanPlugin.getHome('lib', 'python2.7', 'site-packages', 'mpi4py'))],
+                                  emanPlugin.getHome('lib', 'python2.7', 'site-packages', 'mpi4py')),
+                                 ('echo', 'source/locscale_mpi.py')],
                        default=True)
