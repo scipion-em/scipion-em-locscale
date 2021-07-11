@@ -32,7 +32,7 @@ import pyworkflow.utils as pwutils
 
 from .constants import *
 
-__version__ = '3.0.3'
+__version__ = '3.0.4'
 _logo = "locscale_logo.jpg"
 _references = ['Jakobi2017']
 
@@ -81,8 +81,7 @@ class Plugin(pwem.Plugin):
         emanPlugin = self.getEmanPlugin()
         EMAN_ENV_STR = ' '.join(['%s=%s' % (var, emanPlugin.getEnviron()[var])
                                  for var in
-                                 ('PATH', 'PYTHONPATH', 'LD_LIBRARY_PATH',
-                                  'SCIPION_MPI_FLAGS')])
+                                 ('PATH', 'PYTHONPATH', 'LD_LIBRARY_PATH')])
         return EMAN_ENV_STR
 
     @classmethod
