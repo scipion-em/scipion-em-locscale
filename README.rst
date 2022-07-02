@@ -4,6 +4,27 @@ Locscale plugin
 
 This plugin provides a wrapper around `LocScale <https://git.embl.de/jakobi/LocScale>`_ program for local sharpening of cryo-EM density maps.
 
+.. image:: https://img.shields.io/pypi/v/scipion-em-locscale.svg
+        :target: https://pypi.python.org/pypi/scipion-em-locscale
+        :alt: PyPI release
+
+.. image:: https://img.shields.io/pypi/l/scipion-em-locscale.svg
+        :target: https://pypi.python.org/pypi/scipion-em-locscale
+        :alt: License
+
+.. image:: https://img.shields.io/pypi/pyversions/scipion-em-locscale.svg
+        :target: https://pypi.python.org/pypi/scipion-em-locscale
+        :alt: Supported Python versions
+
+.. image:: https://img.shields.io/sonar/quality_gate/scipion-em_scipion-em-locscale?server=https%3A%2F%2Fsonarcloud.io
+        :target: https://sonarcloud.io/dashboard?id=scipion-em_scipion-em-locscale
+        :alt: SonarCloud quality gate
+
+.. image:: https://img.shields.io/pypi/dm/scipion-em-locscale
+        :target: https://pypi.python.org/pypi/scipion-em-locscale
+        :alt: Downloads
+
+
 Installation
 ------------
 
