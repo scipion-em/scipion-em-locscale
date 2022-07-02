@@ -25,17 +25,7 @@
 # *
 # **************************************************************************
 
-from pwem import Domain
-
-
 LOCSCALE_HOME = 'LOCSCALE_HOME'
-
 
 # Supported versions
 V0_1 = '0.1'
-
-# Existing eman versions
-V2_21 = '2.21'
-V2_3 = '2.3'
-V2_31 = '2.31'
-

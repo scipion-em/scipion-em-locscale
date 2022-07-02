@@ -32,7 +32,7 @@ import pyworkflow.utils as pwutils
 
 from .constants import *
 
-__version__ = '3.0.4'
+__version__ = '3.0.5'
 _logo = "locscale_logo.jpg"
 _references = ['Jakobi2017']
 
@@ -51,8 +51,8 @@ class Plugin(pwem.Plugin):
         """ Setup the environment variables needed to launch resmap. """
         environ = pwutils.Environ(os.environ)
         environ.update({
-            'PATH': Plugin.getHome(),
-            'LD_LIBRARY_PATH': str.join(cls.getHome(), 'locscalelib')
+            'PATH': cls.getHome(),
+            'LD_LIBRARY_PATH': os.path.join(cls.getHome(), 'locscalelib')
                                + ":" + cls.getHome(),
         }, position=pwutils.Environ.BEGIN)
 
@@ -63,25 +63,25 @@ class Plugin(pwem.Plugin):
         return cls.getActiveVersion().startswith(V0_1)
 
     @classmethod
-    def getEmanPlugin(self):
+    def getEmanPlugin(cls):
         # --- Eman2 dependencies ---
         try:
-            emanPlugin = Domain.importFromPlugin("eman2", "Plugin",
-                                                 doRaise=True)
+            emanPlugin = pwem.Domain.importFromPlugin("eman2", "Plugin",
+                                                      doRaise=True)
             emanPlugin._defineVariables()
-        except Exception as e:
+        except:
             print(pwutils.redStr("Eman plugin does not installed....You need to install it "
                   "first."))
             return None
         return emanPlugin
 
     @classmethod
-    def getEmanDependencies(self):
+    def getEmanDependencies(cls):
         # to set the Eman2 environ in a bash-shell
-        emanPlugin = self.getEmanPlugin()
+        emanPlugin = cls.getEmanPlugin()
         EMAN_ENV_STR = ' '.join(['%s=%s' % (var, emanPlugin.getEnviron()[var])
                                  for var in
-                                 ('PATH', 'PYTHONPATH', 'LD_LIBRARY_PATH')])
+                                 ('PATH', 'LD_LIBRARY_PATH')])
         return EMAN_ENV_STR
 
     @classmethod
@@ -89,10 +89,24 @@ class Plugin(pwem.Plugin):
         emanPlugin = cls.getEmanPlugin()
         EMAN_ENV_STR = cls.getEmanDependencies()
         emanmpi4piFlag = "mpi4py-installed"
+        with open("/tmp/locscale_mpi.py.patch", "w") as fn:
+            fn.write("""
+7c7
+< revision = filter(str.isdigit, "$Revision: 1 $")  # to be updated by gitlab after every commit 
+---
+> revision = str(filter(str.isdigit, "$Revision: 1 $"))  # to be updated by gitlab after every commit 
+68c68
+<     radial_average = data.calc_radial_dist(map.get_xsize() / 2, 0, 1.0, 0)
+---
+>     radial_average = data.calc_radial_dist(map.get_xsize() // 2, 0, 1.0, 0)\n
+            """)
         env.addPackage('locscale', version='0.1',
                        tar='locscale-0.1.tgz',
-                       commands=[('echo ; echo " > Installing mpi4py in eman2" && '
-                                  'export %s && pip install mpi4py && touch %s' % (EMAN_ENV_STR, emanmpi4piFlag),
-                                  emanPlugin.getHome('lib', 'python2.7', 'site-packages', 'mpi4py')),
-                                 ('echo', 'source/locscale_mpi.py')],
+                       commands=[('echo " > Installing mpi4py in eman2" && ',
+                                  'export %s && conda install -c conda-forge openmpi-mpicc && '
+                                  'pip install mpi4py && touch %s' % (EMAN_ENV_STR, emanmpi4piFlag),
+                                  emanPlugin.getHome('lib', 'python3.9', 'site-packages', 'mpi4py')),
+                                 ('echo " > Creating patch file" && mv /tmp/locscale_mpi.py.patch '
+                                  'source/locscale_mpi.py.patch',
+                                  'source/locscale_mpi.py.patch')],
                        default=True)

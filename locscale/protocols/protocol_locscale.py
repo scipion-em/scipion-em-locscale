@@ -25,8 +25,9 @@
 # **************************************************************************
 
 from pwem.protocols import Prot3D
-from pyworkflow.protocol import params
 from pwem.objects import Volume
+from pwem import Domain
+from pyworkflow.protocol import params
 from pyworkflow.utils import removeBaseExt
 
 from ..convert import *

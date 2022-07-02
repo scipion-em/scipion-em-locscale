@@ -50,7 +50,7 @@ def getSupportedVersions():
 def getSupportedEmanVersions():
     """ LocScale needs eman to work.
     """
-    return [V2_21, V2_3, V2_31]
+    return ['2.9', '2.91', '2.99']
 
 
 def getEmanVersion():
