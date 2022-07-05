@@ -61,7 +61,7 @@ installation path by setting *EMAN2_HOME* variable
 
 Note: **mpi4py** will be installed in the Eman's python
 
-.. warning:: File locscale-0.1/source/locscale_mpi.py needs a patch (see locscale_mpi.py.patch) to be able to work with new versions of EMAN.
+Note2: File locscale-0.1/source/locscale_mpi.py has been patched (see locscale_mpi.py.patch) to be able to work with new versions of EMAN
 
 To check the installation, simply run the following Scipion tests:
 
