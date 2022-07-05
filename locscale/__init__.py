@@ -64,13 +64,12 @@ class Plugin(pwem.Plugin):
 
     @classmethod
     def getEmanPlugin(cls):
-        # --- Eman2 dependencies ---
         try:
             emanPlugin = pwem.Domain.importFromPlugin("eman2", "Plugin",
                                                       doRaise=True)
             emanPlugin._defineVariables()
         except:
-            print(pwutils.redStr("Eman plugin does not installed....You need to install it "
+            print(pwutils.redStr("Eman plugin is not installed....You need to install it "
                   "first."))
             return None
         return emanPlugin
@@ -79,34 +78,18 @@ class Plugin(pwem.Plugin):
     def getEmanDependencies(cls):
         # to set the Eman2 environ in a bash-shell
         emanPlugin = cls.getEmanPlugin()
-        EMAN_ENV_STR = ' '.join(['%s=%s' % (var, emanPlugin.getEnviron()[var])
-                                 for var in
-                                 ('PATH', 'LD_LIBRARY_PATH')])
+        EMAN_ENV_STR = 'export PATH="%s"' % emanPlugin.getEnviron()['PATH']
         return EMAN_ENV_STR
 
     @classmethod
     def defineBinaries(cls, env):
         emanPlugin = cls.getEmanPlugin()
         EMAN_ENV_STR = cls.getEmanDependencies()
-        emanmpi4piFlag = "mpi4py-installed"
-        with open("/tmp/locscale_mpi.py.patch", "w") as fn:
-            fn.write("""
-7c7
-< revision = filter(str.isdigit, "$Revision: 1 $")  # to be updated by gitlab after every commit 
----
-> revision = str(filter(str.isdigit, "$Revision: 1 $"))  # to be updated by gitlab after every commit 
-68c68
-<     radial_average = data.calc_radial_dist(map.get_xsize() / 2, 0, 1.0, 0)
----
->     radial_average = data.calc_radial_dist(map.get_xsize() // 2, 0, 1.0, 0)\n
-            """)
         env.addPackage('locscale', version='0.1',
                        tar='locscale-0.1.tgz',
-                       commands=[('echo " > Installing mpi4py in eman2" && ',
-                                  'export %s && conda install -c conda-forge openmpi-mpicc && '
-                                  'pip install mpi4py && touch %s' % (EMAN_ENV_STR, emanmpi4piFlag),
-                                  emanPlugin.getHome('lib', 'python3.9', 'site-packages', 'mpi4py')),
-                                 ('echo " > Creating patch file" && mv /tmp/locscale_mpi.py.patch '
-                                  'source/locscale_mpi.py.patch',
-                                  'source/locscale_mpi.py.patch')],
+                       commands=[('echo " > Installing mpi4py in eman2" && '
+                                  '%s && conda install -c conda-forge openmpi-mpicc && pip install mpi4py' % EMAN_ENV_STR,
+                                  emanPlugin.getHome("lib/python3.9/site-packages/mpi4py")),
+                                  ('echo', 'source/locscale_mpi.py')],
                        default=True)
+
