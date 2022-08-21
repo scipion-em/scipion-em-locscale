@@ -42,13 +42,13 @@ b) Developer's version
 
    .. code-block::
 
-      git clone https://github.com/scipion-em/scipion-em-locscale.git
+      git clone -b devel https://github.com/scipion-em/scipion-em-locscale.git
 
    * install
 
    .. code-block::
 
-      scipion installp -p path_to_scipion-em-locscale --devel
+      scipion installp -p path/to/scipion-em-locscale --devel
 
 LocScale sources will be downloaded automatically with the plugin,
 but you can also link an existing installation.

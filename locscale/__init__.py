@@ -48,7 +48,7 @@ class Plugin(pwem.Plugin):
 
     @classmethod
     def getEnviron(cls):
-        """ Setup the environment variables needed to launch resmap. """
+        """ Setup the environment variables needed to launch locscale. """
         environ = pwutils.Environ(os.environ)
         environ.update({
             'PATH': cls.getHome(),
@@ -69,27 +69,20 @@ class Plugin(pwem.Plugin):
                                                       doRaise=True)
             emanPlugin._defineVariables()
         except:
-            print(pwutils.redStr("Eman plugin is not installed....You need to install it "
-                  "first."))
+            print(pwutils.redStr("Eman plugin is not installed....You need "
+                                 "to install it first."))
             return None
         return emanPlugin
 
     @classmethod
-    def getEmanDependencies(cls):
-        # to set the Eman2 environ in a bash-shell
-        emanPlugin = cls.getEmanPlugin()
-        EMAN_ENV_STR = 'export PATH="%s"' % emanPlugin.getEnviron()['PATH']
-        return EMAN_ENV_STR
-
-    @classmethod
     def defineBinaries(cls, env):
         emanPlugin = cls.getEmanPlugin()
-        EMAN_ENV_STR = cls.getEmanDependencies()
         env.addPackage('locscale', version='0.1',
                        tar='locscale-0.1.tgz',
-                       commands=[('echo " > Installing mpi4py in eman2" && '
-                                  '%s && conda install -c conda-forge openmpi-mpicc && pip install mpi4py' % EMAN_ENV_STR,
-                                  emanPlugin.getHome("lib/python3.9/site-packages/mpi4py")),
-                                  ('echo', 'source/locscale_mpi.py')],
+                       commands=[(
+                           f'echo " > Installing mpi4py in eman2" && '
+                           f'conda activate {emanPlugin.getHome()} && '
+                           f'conda install -c conda-forge openmpi-mpicc && pip install mpi4py',
+                           emanPlugin.getHome("lib/python3.9/site-packages/mpi4py")),
+                           ('echo', 'source/locscale_mpi.py')],
                        default=True)
-
