@@ -81,6 +81,7 @@ class Plugin(pwem.Plugin):
                        tar='locscale-0.1.tgz',
                        commands=[(
                            f'echo " > Installing mpi4py in eman2" && '
+                           f'{cls.getCondaActivationCmd()} ',
                            f'conda activate {emanPlugin.getHome()} && '
                            f'conda install -c conda-forge openmpi-mpicc && pip install mpi4py',
                            emanPlugin.getHome("lib/python3.9/site-packages/mpi4py")),
