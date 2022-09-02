@@ -25,8 +25,9 @@
 # **************************************************************************
 
 from pwem.protocols import Prot3D
-from pyworkflow.protocol import params
 from pwem.objects import Volume
+from pwem import Domain
+from pyworkflow.protocol import params
 from pyworkflow.utils import removeBaseExt
 
 from ..convert import *
@@ -121,7 +122,7 @@ class ProtLocScale(Prot3D):
 
             if inputSize != refSize or self.getSampling() != refSamp:
                 errors.append('Input volume and reference volume should be '
-                              'of the same size and samplig rate')
+                              'of the same size and sampling rate')
         return errors
 
     def _warnings(self):

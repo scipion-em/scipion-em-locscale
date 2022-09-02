@@ -2,16 +2,33 @@
 Locscale plugin
 ===============
 
-This plugin provide wrappers around `LocScale <https://git.embl.de/jakobi/LocScale>`_ program for local sharpening of cryo-EM density maps.
+This plugin provides a wrapper around `LocScale <https://git.embl.de/jakobi/LocScale>`_ program for local sharpening of cryo-EM density maps.
 
-.. figure:: http://scipion-test.cnb.csic.es:9980/badges/locscale_devel.svg
-   :align: left
-   :alt: build status
+.. image:: https://img.shields.io/pypi/v/scipion-em-locscale.svg
+        :target: https://pypi.python.org/pypi/scipion-em-locscale
+        :alt: PyPI release
+
+.. image:: https://img.shields.io/pypi/l/scipion-em-locscale.svg
+        :target: https://pypi.python.org/pypi/scipion-em-locscale
+        :alt: License
+
+.. image:: https://img.shields.io/pypi/pyversions/scipion-em-locscale.svg
+        :target: https://pypi.python.org/pypi/scipion-em-locscale
+        :alt: Supported Python versions
+
+.. image:: https://img.shields.io/sonar/quality_gate/scipion-em_scipion-em-locscale?server=https%3A%2F%2Fsonarcloud.io
+        :target: https://sonarcloud.io/dashboard?id=scipion-em_scipion-em-locscale
+        :alt: SonarCloud quality gate
+
+.. image:: https://img.shields.io/pypi/dm/scipion-em-locscale
+        :target: https://pypi.python.org/pypi/scipion-em-locscale
+        :alt: Downloads
+
 
 Installation
 ------------
 
-You will need to use `3.0 <https://github.com/I2PC/scipion/releases/tag/V2.0.0>`_ version of Scipion to be able to run these protocols. To install the plugin, you have two options:
+You will need to use 3.0+ version of Scipion to be able to run these protocols. To install the plugin, you have two options:
 
 a) Stable version
 
@@ -25,13 +42,13 @@ b) Developer's version
 
    .. code-block::
 
-      git clone https://github.com/scipion-em/scipion-em-locscale.git
+      git clone -b devel https://github.com/scipion-em/scipion-em-locscale.git
 
    * install
 
    .. code-block::
 
-      scipion installp -p path_to_scipion-em-locscale --devel
+      scipion installp -p path/to/scipion-em-locscale --devel
 
 LocScale sources will be downloaded automatically with the plugin,
 but you can also link an existing installation.
@@ -40,9 +57,11 @@ if you want to change it, set *LOCSCALE_HOME* in ``scipion.conf``
 file to the folder where the LocScale is installed.
 LocScale uses EMAN2 libraries, so you need to provide existing EMAN2
 installation path by setting *EMAN2_HOME* variable
-(default eman-2.3) in the config file.
+(default eman-2.99) in the config file.
 
 Note: **mpi4py** will be installed in the Eman's python
+
+Note2: File locscale-0.1/source/locscale_mpi.py has been patched (see locscale_mpi.py.patch) to be able to work with new versions of EMAN
 
 To check the installation, simply run the following Scipion tests:
 
