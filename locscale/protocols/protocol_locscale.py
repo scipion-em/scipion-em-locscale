@@ -29,7 +29,7 @@ from pwem.protocols import Prot3D
 from pwem.objects import Volume
 from pwem import Domain
 from pyworkflow.protocol import params
-from pyworkflow.utils import removeBaseExt, createLink
+from pyworkflow.utils import removeBaseExt, createLink, moveFile
 
 from ..convert import convertBinaryVol
 from ..constants import REF_VOL, REF_PDB
@@ -122,7 +122,7 @@ class ProtLocScale(Prot3D):
                       help="Extra command line parameters. "
                            "See *locscale run_locscale --help*.")
 
-        form.addParallelSection(threads=3, mpi=0)
+        form.addParallelSection(threads=3, mpi=1)
 
     # --------------------------- INSERT steps functions ----------------------
     def _insertAllSteps(self):
@@ -133,8 +133,6 @@ class ProtLocScale(Prot3D):
     # --------------------------- STEPS functions -----------------------------
     def convertStep(self):
         tmpFn = self._getTmpPath()
-
-        # convert input maps
         self.inputVolsFn = []
         vol = self.inputVolume.get()
         if vol.hasHalfMaps():
@@ -161,13 +159,27 @@ class ProtLocScale(Prot3D):
         if self.extraParams.hasValue():
             args += ' ' + self.extraParams.get()
 
-        self.runJob(Plugin.getProgram(program), args, numberOfThreads=1)
+        if self.numberOfMpi > 1:
+            # insert "mpirun -np X" after conda activation cmd
+            mpiCmd = self.hostConfig.mpiCommand.get() % {
+                'JOB_NODES': self.numberOfMpi,
+                'COMMAND': f"locscale {program}"}
+            cmd = f"{Plugin.getActivationCmd()} && {mpiCmd}"
+        else:
+            cmd = Plugin.getProgram(program)
+
+        self.runJob(cmd, args, cwd=self._getTmpPath(),
+                    numberOfThreads=1, numberOfMpi=1)
+
+        # Move the resulting volume
+        if os.path.exists(self.getOutputFn("tmp")):
+            moveFile(self.getOutputFn("tmp"), self.getOutputFn("extra"))
 
     def createOutputStep(self):
         """ Create the output volume. """
         outputVolume = Volume()
         outputVolume.setSamplingRate(self.getSampling())
-        outputVolume.setFileName(self.getOutputFn())
+        outputVolume.setFileName(self.getOutputFn("extra"))
         self._defineOutputs(outputVolume=outputVolume)
         self._defineTransformRelation(self.inputVolume, outputVolume)
 
@@ -176,7 +188,7 @@ class ProtLocScale(Prot3D):
         """ We validate if CCP4 is installed and if inputs make sense. """
         errors = []
         try:
-            ccp4Plugin = Domain.importFromPlugin("ccp4", "Plugin", doRaise=True)
+            _ = Domain.importFromPlugin("ccp4", "Plugin", doRaise=True)
         except:
             errors.append("CCP4 plugin is not installed. LocScale needs "
                           "REFMAC5 which is part of CCP4.")
@@ -184,7 +196,6 @@ class ProtLocScale(Prot3D):
         if self.useNNpredict and not self.inputVolume.get().hasHalfMaps():
             errors.append("EMmerNet predictions require two halfmaps "
                           "associated with an input volume.")
-
 
         inputVol = self.inputVolume.get()
         reference = self.refObj.get()
@@ -197,19 +208,12 @@ class ProtLocScale(Prot3D):
                 errors.append('Input map and reference volume should have '
                               'the same size and sampling rate')
 
+        if (self.binaryMask.hasValue() and
+                self.binaryMask.get().getDim() != inputSize):
+            errors.append('Input map and binary mask should be '
+                          'of the same size')
+
         return errors
-
-    def _warnings(self):
-        """ The input volume and the mask should be of the same size
-            but the program can run.
-        """
-        warnings = []
-
-        if self.binaryMask.hasValue() and \
-                self.binaryMask.get().getDim() != self.inputVolume.get().getDim():
-            warnings.append('Input map and binary mask should be '
-                            'of the same size')
-        return warnings
 
     def _summary(self):
         summary = []
@@ -222,25 +226,26 @@ class ProtLocScale(Prot3D):
 
     # --------------------------- UTILS functions -----------------------------
     def prepareParams(self, program="run_locscale"):
-        args = [f"--outfile {self.getOutputFn()}",
+        args = [f"--outfile {os.path.basename(self.getOutputFn('tmp'))}",
                 "--verbose"]
 
+        inputVols = ' '.join(self.inputVolsFn)
         if len(self.inputVolsFn) > 1:
-            args.append(f"--halfmap_paths {' '.join(self.inputVolsFn)}")
+            args.append(f"--halfmap_paths {inputVols}")
         else:
-            args.append(f"--emmap_path {' '.join(self.inputVolsFn)}")
+            args.append(f"--emmap_path {inputVols}")
 
         if program == "run_emmernet":
             args.append(f"-trained_model {self.getEnumText('emmernetModel')}")
             args.append(f"--gpu_ids {' '.join(str(i) for i in self.getGpuList())}")
-        else:
+        else:  # run_locscale
             args.extend([f"--apix {self.getSampling()}",
                          f"--ref_resolution {self.resol.get()}"])
 
             if self.refType == REF_VOL:
                 args.append(f"--model_map {self.refVolFn}")
             elif self.refType == REF_PDB:
-                args.append(f"--model_coordinates {self.refPdbFn}")
+                args.append(f"--model_coordinates {os.path.basename(self.refPdbFn)}")
                 if self.incompletePdb:
                     args.append("--complete_model")
 
@@ -261,7 +266,7 @@ class ProtLocScale(Prot3D):
     def getSampling(self):
         return self.inputVolume.get().getSamplingRate()
 
-    def getOutputFn(self):
+    def getOutputFn(self, folder):
         """ Returns the scaled output file name. """
         outputFnBase = removeBaseExt(self.inputVolume.get().getFileName())
-        return self._getExtraPath(outputFnBase) + '_scaled.mrc'
+        return self._getPath(folder, outputFnBase) + '_scaled.mrc'

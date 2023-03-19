@@ -49,12 +49,9 @@ class Plugin(pwem.Plugin):
     @classmethod
     def getEnviron(cls):
         """ Setup the environment variables needed to launch LocScale. """
-        environ = pwutils.Environ(os.environ)
-
-        # LocScale requires Refmac5 binary in PATH
-        environ.update(
-            {'PATH': cls.getCcp4Plugin().getHome('bin')},
-            position=pwutils.Environ.BEGIN)
+        environ = cls.getCcp4Plugin().getEnviron()
+        environ.update({'PATH': cls.getCcp4Plugin().getHome("bin")},
+                       position=pwutils.Environ.BEGIN)
 
         for v in ['PYTHONPATH', 'PYTHONHOME']:
             if v in environ:
@@ -126,7 +123,7 @@ class Plugin(pwem.Plugin):
         installCmds = [
             cls.getCondaActivationCmd(),
             f'conda create -y -n {ENV_NAME} python=3.8 gfortran -c conda-forge &&',
-            f'conda activate {ENV_NAME} && pip install locscale &&',
+            f'conda activate {ENV_NAME} && pip install scikit-learn locscale &&',
             f'touch {FLAG}'  # Flag installation finished
         ]
         finalCmds = [(" ".join(installCmds), FLAG)]

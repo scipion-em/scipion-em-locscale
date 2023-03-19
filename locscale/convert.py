@@ -48,4 +48,4 @@ def convertBinaryVol(vol, outputDir):
     else:
         createAbsLink(os.path.abspath(fn), newFn)
 
-    return newFn
+    return os.path.basename(newFn)

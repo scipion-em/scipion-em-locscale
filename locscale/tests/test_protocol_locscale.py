@@ -63,13 +63,11 @@ class TestProtLocscale(BaseTest):
         cls.launchProtocol(cls.protImportModel)
 
     def testLocscale(self):
-        print(magentaStr("\n==> Testing locscale:"))
-
         def launchTest(label, vol, volRef=None, pdbRef=None, useNN=False):
-            print(magentaStr("\nTest %s:" % label))
-            pLocScale = self.proj.newProtocol(ProtLocScale,
-                                              objLabel='locscale - ' + label,
-                                              inputVolume=vol)
+            print(magentaStr(f"\n==> Testing locscale ({label}):"))
+            pLocScale = self.newProtocol(ProtLocScale,
+                                         objLabel='locscale - ' + label,
+                                         inputVolume=vol)
             if useNN:
                 pLocScale.useNNpredict.set(True)
             else:
@@ -78,30 +76,29 @@ class TestProtLocscale(BaseTest):
                     pLocScale.refObj.set(volRef)
                 elif pdbRef is not None:
                     pLocScale.refType.set(1)
-                    pLocScale.refObj.set(pdbRef)
+                    pLocScale.refPdb.set(pdbRef)
                 else:
                     pLocScale.refType.set(0)
 
-            self.proj.launchProtocol(pLocScale, wait=True)
+            self.launchProtocol(pLocScale, wait=True)
 
             self.assertIsNotNone(pLocScale.outputVolume,
-                                 "outputVolume is None for %s test." % label)
+                                 "outputVolume is None for %s test" % label)
 
-            self.assertEqual(self.inputVol.getDim(),
+            self.assertEqual(vol.getDim(),
                              pLocScale.outputVolume.getDim(),
                              "outputVolume has a different size than inputVol "
                              "for %s test" % label)
 
-            self.assertEqual(self.inputVol.getSamplingRate(),
+            self.assertEqual(vol.getSamplingRate(),
                              pLocScale.outputVolume.getSamplingRate(),
                              "outputVolume has a different sampling rate than "
                              "inputVol for %s test" % label)
 
         inputVol = self.protImportMap.outputVolume
         pdbRef = self.protImportModel.outputPdb
-        volRef = None
 
         launchTest('noRef', vol=inputVol)
-        launchTest('volRef', vol=inputVol, volRef=volRef)
+        #launchTest('volRef', vol=inputVol, volRef=volRef)  # TODO: test reference volume case
         launchTest('pdbRef', vol=inputVol, pdbRef=pdbRef)
         launchTest('EMmerNet', vol=inputVol, useNN=True)
