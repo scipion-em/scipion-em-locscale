@@ -62,7 +62,7 @@ python with conda ones. One example of this could can be seen below but
 depending on your conda version and shell you will need something different:
 CONDA_ACTIVATION_CMD = eval "$(/extra/miniconda3/bin/conda shell.bash hook)"
 
-*CRYODRGN_ENV_ACTIVATION* (default = conda activate locscale-2.1):
+*LOCSCALE_ENV_ACTIVATION* (default = conda activate locscale-2.1):
 Command to activate the LocScale environment.
 
 
@@ -87,4 +87,4 @@ References
 ----------
 
 1. A.J. Jakobi, M. Wilmanns and C. Sachse, Model-based local density sharpening of cryo-EM maps, eLife 6: e27131 (2017).
-2. A. Bharadwaj and A.J. Jakobi, Electron scattering properties and their use in cryo-EM map sharpening, Faraday Discussions D2FD00078D (2022)
+2. A.Bharadwaj and A.J. Jakobi, Electron scattering properties and their use in cryo-EM map sharpening, Faraday Discussions D2FD00078D (2022)
