@@ -6,7 +6,7 @@
 # *
 # * This program is free software; you can redistribute it and/or modify
 # * it under the terms of the GNU General Public License as published by
-# * the Free Software Foundation; either version 2 of the License, or
+# * the Free Software Foundation; either version 3 of the License, or
 # * (at your option) any later version.
 # *
 # * This program is distributed in the hope that it will be useful,
@@ -26,88 +26,26 @@
 
 import os
 
-from pyworkflow.utils import replaceBaseExt
+from pyworkflow.utils import replaceBaseExt, createAbsLink
 from pwem.emlib.image import ImageHandler
-
-from .constants import *
-from . import Plugin
-
-
-def getVersion():
-    locscaleHome = Plugin.getVar(LOCSCALE_HOME)
-
-    version = ''
-    for v in getSupportedVersions():
-        if v in locscaleHome:
-            version = v
-    return version
-
-
-def getSupportedVersions():
-    return ['0.1']
-
-
-def getSupportedEmanVersions():
-    """ LocScale needs eman to work.
-    """
-    return ['2.9', '2.91', '2.99']
-
-
-def getEmanVersion():
-    """ Returns a valid eman version installed or an empty string.
-    """
-    emanVersion = Plugin.getEmanPlugin().getHome()
-    if os.path.exists(emanVersion):
-        return emanVersion.split('-')[-1]
-    return ''
-
-
-def validateEmanVersion(errors):
-    """ Validate if eman version is set properly according
-     to installed version and the one set in the config file.
-     Params:
-        protocol: the input protocol calling to validate
-        errors: a list that will be used to add the error message.
-    """
-    if getEmanVersion() not in getSupportedEmanVersions():
-        errors.append('EMAN2 is needed to execute this protocol. '
-                      'Install one of the following versions: %s.'
-                      % ', '.join(getSupportedEmanVersions()))
-    return errors
-
-
-def getEmanPythonProgram(program):
-    emanPlugin = Plugin.getEmanPlugin()
-    env = emanPlugin.getEnviron()
-
-    # locscale scripts are in $LOCSCALE_HOME/source
-    program = Plugin.getHome('source', program)
-    python = emanPlugin.getProgram('', True).split(' ')[0]
-
-    return python, program, env
 
 
 def convertBinaryVol(vol, outputDir):
-    """ Convert binary volume to a mrc format.
+    """ Convert binary volume to mrc format.
     Params:
         vol: input volume object to be converted.
         outputDir: where to put the converted file(s)
     Return:
         new file name of the volume (converted or not).
     """
+
     ih = ImageHandler()
+    fn = vol if isinstance(vol, str) else vol.getFileName()
+    newFn = os.path.join(outputDir, replaceBaseExt(fn, 'mrc'))
 
-    def convertToMrc(fn):
-        """ Convert from a format that is not read by Relion
-        to mrc format.
-        """
-        newFn = os.path.join(outputDir, replaceBaseExt(fn, 'mrc'))
+    if not fn.endswith('.mrc'):
         ih.convert(fn, newFn)
-        return newFn
+    else:
+        createAbsLink(os.path.abspath(fn), newFn)
 
-    volFn = ih.removeFileType(vol.getFileName())
-
-    if not volFn.endswith('.mrc'):
-        volFn = convertToMrc(volFn)
-
-    return volFn
+    return newFn
