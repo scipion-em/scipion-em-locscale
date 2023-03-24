@@ -47,11 +47,14 @@ class Plugin(pwem.Plugin):
         cls._defineVar(LOCSCALE_ENV_ACTIVATION, DEFAULT_ACTIVATION_CMD)
 
     @classmethod
-    def getEnviron(cls):
+    def getEnviron(cls, useCcp4=False):
         """ Setup the environment variables needed to launch LocScale. """
-        environ = cls.getCcp4Plugin().getEnviron()
-        environ.update({'PATH': cls.getCcp4Plugin().getHome("bin")},
-                       position=pwutils.Environ.BEGIN)
+        if useCcp4:
+            environ = cls.getCcp4Plugin().getEnviron()
+            environ.update({'PATH': cls.getCcp4Plugin().getHome("bin")},
+                           position=pwutils.Environ.BEGIN)
+        else:
+            environ = pwutils.Environ(os.environ)
 
         for v in ['PYTHONPATH', 'PYTHONHOME']:
             if v in environ:
@@ -63,12 +66,10 @@ class Plugin(pwem.Plugin):
     def getCcp4Plugin(cls):
         try:
             ccp4Plugin = pwem.Domain.importFromPlugin("ccp4", "Plugin",
-                                                      doRaise=True)
+                                                      doRaise=False)
             ccp4Plugin._defineVariables()
         except:
-            print(pwutils.redStr("CCP4 plugin is not installed. LocScale needs "
-                                 "REFMAC5 which is part of CCP4."))
-            return None
+            return False
 
         return ccp4Plugin
 
@@ -121,17 +122,19 @@ class Plugin(pwem.Plugin):
 
         # try to get CONDA activation command
         installCmds = [
+            'touch refmac5 && chmod a+x refmac5 &&',  # fake binary for installer to work
             cls.getCondaActivationCmd(),
             f'conda create -y -n {ENV_NAME} python=3.8 gfortran -c conda-forge &&',
             f'conda activate {ENV_NAME} && pip install scikit-learn locscale &&',
+            'rm -f refmac5 &&',
             f'touch {FLAG}'  # Flag installation finished
         ]
         finalCmds = [(" ".join(installCmds), FLAG)]
 
         envPath = os.environ.get('PATH', "")
-        # locscale setup.py needs conda and refmac5 in PATH
+        # locscale setup.py needs conda and refmac5 file in PATH
         installEnvVars = {'SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL': 'True',
-                          'PATH': f"{cls.getCcp4Plugin().getHome('bin')}:{envPath}"}
+                          'PATH': f"{os.getcwd()}/{ENV_NAME}:{envPath}"}
         env.addPackage('locscale', version=version,
                        tar='void.tgz',
                        commands=finalCmds,

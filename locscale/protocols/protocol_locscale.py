@@ -27,12 +27,11 @@ import os
 
 from pwem.protocols import Prot3D
 from pwem.objects import Volume
-from pwem import Domain
 from pyworkflow.protocol import params
 from pyworkflow.utils import removeBaseExt, createLink, moveFile
 
 from ..convert import convertBinaryVol
-from ..constants import REF_VOL, REF_PDB
+from ..constants import REF_VOL, REF_PDB, REF_NONE
 from .. import Plugin
 
 
@@ -168,8 +167,9 @@ class ProtLocScale(Prot3D):
         else:
             cmd = Plugin.getProgram(program)
 
+        env = Plugin.getEnviron(useCcp4=self.checkCcp4())
         self.runJob(cmd, args, cwd=self._getTmpPath(),
-                    numberOfThreads=1, numberOfMpi=1)
+                    env=env, numberOfThreads=1, numberOfMpi=1)
 
         # Move the resulting volume
         if os.path.exists(self.getOutputFn("tmp")):
@@ -184,14 +184,18 @@ class ProtLocScale(Prot3D):
         self._defineTransformRelation(self.inputVolume, outputVolume)
 
     # --------------------------- INFO functions ------------------------------
+    def _warnings(self):
+        warnings = []
+
+        if not self.useNNpredict and not self.checkCcp4():
+            warnings.append("CCP4 plugin is not installed. "
+                            "Refmac5 refinement will be skipped.")
+
+        return warnings
+
     def _validate(self):
-        """ We validate if CCP4 is installed and if inputs make sense. """
+        """ We validate if inputs make sense. """
         errors = []
-        try:
-            _ = Domain.importFromPlugin("ccp4", "Plugin", doRaise=True)
-        except:
-            errors.append("CCP4 plugin is not installed. LocScale needs "
-                          "REFMAC5 which is part of CCP4.")
 
         if self.useNNpredict and not self.inputVolume.get().hasHalfMaps():
             errors.append("EMmerNet predictions require two halfmaps "
@@ -212,6 +216,10 @@ class ProtLocScale(Prot3D):
                 self.binaryMask.get().getDim() != inputSize):
             errors.append('Input map and binary mask should be '
                           'of the same size')
+
+        if self.refType == REF_NONE and not self.checkCcp4():
+            errors.append("Reference type = None requires REFMAC5 refinement. "
+                          "CCP4 plugin was not found.")
 
         return errors
 
@@ -261,6 +269,9 @@ class ProtLocScale(Prot3D):
             if self.numberOfThreads > 1:
                 args.append(f"--number_processes {self.numberOfThreads.get()}")
 
+            if not self.checkCcp4():
+                args.append("--skip_refine")
+
         return " ".join(args)
 
     def getSampling(self):
@@ -270,3 +281,6 @@ class ProtLocScale(Prot3D):
         """ Returns the scaled output file name. """
         outputFnBase = removeBaseExt(self.inputVolume.get().getFileName())
         return self._getPath(folder, outputFnBase) + '_scaled.mrc'
+
+    def checkCcp4(self):
+        return Plugin.getCcp4Plugin()
