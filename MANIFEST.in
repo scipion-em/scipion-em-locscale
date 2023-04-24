@@ -1,3 +1,11 @@
-include *.txt
-include MANIFEST.in
+# Include the README
 include *.rst
+
+# Include the license file
+include LICENSE
+
+# Include the changelog
+include CHANGES.txt
+
+# Include conf file
+include locscale/protocols.conf

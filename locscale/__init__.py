@@ -7,7 +7,7 @@
 # *
 # * This program is free software; you can redistribute it and/or modify
 # * it under the terms of the GNU General Public License as published by
-# * the Free Software Foundation; either version 2 of the License, or
+# * the Free Software Foundation; either version 3 of the License, or
 # * (at your option) any later version.
 # *
 # * This program is distributed in the hope that it will be useful,
@@ -29,61 +29,115 @@ import os
 
 import pwem
 import pyworkflow.utils as pwutils
+from pyworkflow import Config
 
 from .constants import *
 
-__version__ = '3.0.5'
+__version__ = '3.1'
 _logo = "locscale_logo.jpg"
-_references = ['Jakobi2017']
+_references = ['Jakobi2017', 'Bharadwaj2022']
 
 
 class Plugin(pwem.Plugin):
-    _homeVar = LOCSCALE_HOME
-    _pathVars = [LOCSCALE_HOME]
-    _supportedVersions = [V0_1]
+    _supportedVersions = [V2_1]
+    _url = "https://github.com/scipion-em/scipion-em-locscale"
 
     @classmethod
     def _defineVariables(cls):
-        cls._defineEmVar(LOCSCALE_HOME, 'locscale-0.1')
+        cls._defineVar(LOCSCALE_ENV_ACTIVATION, DEFAULT_ACTIVATION_CMD)
 
     @classmethod
-    def getEnviron(cls):
-        """ Setup the environment variables needed to launch locscale. """
-        environ = pwutils.Environ(os.environ)
-        environ.update({
-            'PATH': cls.getHome(),
-            'LD_LIBRARY_PATH': os.path.join(cls.getHome(), 'locscalelib')
-                               + ":" + cls.getHome(),
-        }, position=pwutils.Environ.BEGIN)
+    def getEnviron(cls, useCcp4=False):
+        """ Setup the environment variables needed to launch LocScale. """
+        if useCcp4:
+            environ = cls.getCcp4Plugin().getEnviron()
+            environ.update({'PATH': cls.getCcp4Plugin().getHome("bin")},
+                           position=pwutils.Environ.BEGIN)
+        else:
+            environ = pwutils.Environ(os.environ)
+
+        for v in ['PYTHONPATH', 'PYTHONHOME']:
+            if v in environ:
+                del environ[v]
 
         return environ
 
     @classmethod
-    def isVersionActive(cls):
-        return cls.getActiveVersion().startswith(V0_1)
+    def getCcp4Plugin(cls):
+        try:
+            ccp4Plugin = pwem.Domain.importFromPlugin("ccp4", "Plugin",
+                                                      doRaise=False)
+            ccp4Plugin._defineVariables()
+        except:
+            return False
+
+        return ccp4Plugin
 
     @classmethod
-    def getEmanPlugin(cls):
-        try:
-            emanPlugin = pwem.Domain.importFromPlugin("eman2", "Plugin",
-                                                      doRaise=True)
-            emanPlugin._defineVariables()
-        except:
-            print(pwutils.redStr("Eman plugin is not installed....You need "
-                                 "to install it first."))
-            return None
-        return emanPlugin
+    def getDependencies(cls):
+        """ Return a list of dependencies. Include conda if
+        activation command was not found. """
+        condaActivationCmd = cls.getCondaActivationCmd()
+        neededProgs = []
+        if not condaActivationCmd:
+            neededProgs.append('conda')
+
+        return neededProgs
+
+    @classmethod
+    def getActiveVersion(cls, *args):
+        """ Return the env name that is currently active. """
+        envVar = cls.getVar(LOCSCALE_ENV_ACTIVATION)
+        return envVar.split()[-1].split("-")[-1]
+
+    @classmethod
+    def getLocscaleEnvActivation(cls):
+        """ Remove the scipion home and activate the conda environment. """
+        activation = cls.getVar(LOCSCALE_ENV_ACTIVATION)
+        scipionHome = Config.SCIPION_HOME + os.path.sep
+
+        return activation.replace(scipionHome, "", 1)
+
+    @classmethod
+    def getActivationCmd(cls):
+        """ Return the activation command. """
+        return '%s %s' % (cls.getCondaActivationCmd(),
+                          cls.getLocscaleEnvActivation())
+
+    @classmethod
+    def getProgram(cls, program="run_locscale"):
+        """ Create LocScale command line. """
+        return f"{cls.getActivationCmd()} && locscale {program} "
 
     @classmethod
     def defineBinaries(cls, env):
-        emanPlugin = cls.getEmanPlugin()
-        env.addPackage('locscale', version='0.1',
-                       tar='locscale-0.1.tgz',
-                       commands=[(
-                           f'echo " > Installing mpi4py in eman2" && '
-                           f'{cls.getCondaActivationCmd()} '
-                           f'conda activate {emanPlugin.getHome()} && '
-                           f'conda install -y -c conda-forge openmpi-mpicc && pip install mpi4py',
-                           emanPlugin.getHome("lib/python3.9/site-packages/mpi4py")),
-                           ('echo', 'source/locscale_mpi.py')],
-                       default=True)
+        for ver in VERSIONS:
+            cls.addLocscalePackage(env, ver,
+                                   default=ver == LOCSCALE_DEFAULT_VER_NUM)
+
+    @classmethod
+    def addLocscalePackage(cls, env, version, default=False):
+        ENV_NAME = f"locscale-{version}"
+        FLAG = f"locscale_{version}_installed"
+
+        # try to get CONDA activation command
+        installCmds = [
+            'touch refmac5 && chmod a+x refmac5 &&',  # fake binary for installer to work
+            cls.getCondaActivationCmd(),
+            f'conda create -y -n {ENV_NAME} python=3.8 gfortran -c conda-forge &&',
+            f'conda activate {ENV_NAME} && pip install scikit-learn locscale &&',
+            'rm -f refmac5 &&',
+            f'touch {FLAG}'  # Flag installation finished
+        ]
+        finalCmds = [(" ".join(installCmds), FLAG)]
+
+        envPath = os.environ.get('PATH', "")
+        # locscale setup.py needs conda and refmac5 file in PATH
+        installEnvVars = {'SKLEARN_ALLOW_DEPRECATED_SKLEARN_PACKAGE_INSTALL': 'True',
+                          'PATH': f"{os.getcwd()}/{ENV_NAME}:{envPath}"}
+        env.addPackage('locscale', version=version,
+                       tar='void.tgz',
+                       commands=finalCmds,
+                       neededProgs=cls.getDependencies(),
+                       default=default,
+                       vars=installEnvVars)
