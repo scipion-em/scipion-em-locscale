@@ -202,9 +202,10 @@ class ProtLocScale(Prot3D):
                           "associated with an input volume.")
 
         inputVol = self.inputVolume.get()
+        inputSize = inputVol.getDim()
         reference = self.refObj.get()
-        if inputVol is not None and reference is not None:
-            inputSize = inputVol.getDim()
+
+        if reference is not None:
             refSize = reference.getDim()
             refSamp = reference.getSamplingRate()
 
