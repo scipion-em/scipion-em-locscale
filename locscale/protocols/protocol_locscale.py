@@ -6,7 +6,7 @@
 # *
 # * This program is free software; you can redistribute it and/or modify
 # * it under the terms of the GNU General Public License as published by
-# * the Free Software Foundation; either version 2 of the License, or
+# * the Free Software Foundation; either version 3 of the License, or
 # * (at your option) any later version.
 # *
 # * This program is distributed in the hope that it will be useful,
@@ -23,192 +23,265 @@
 # *  e-mail address 'scipion@cnb.csic.es'
 # *
 # **************************************************************************
+import os
 
 from pwem.protocols import Prot3D
 from pwem.objects import Volume
-from pwem import Domain
 from pyworkflow.protocol import params
-from pyworkflow.utils import removeBaseExt
+from pyworkflow.utils import removeBaseExt, createLink, moveFile
 
-from ..convert import *
-
-try:
-    emanPlugin = Domain.importFromPlugin("eman2", "Plugin", doRaise=True)
-except Exception as e:
-    print("Eman plugin not found! You need to install it first.")
+from ..convert import convertBinaryVol
+from ..constants import REF_VOL, REF_PDB, REF_NONE
+from .. import Plugin
 
 
 class ProtLocScale(Prot3D):
     """ This protocol computes contrast-enhanced cryo-EM maps
-        by local amplitude scaling using a reference model.
+        by local amplitude scaling, optionally using a reference model.
     """
     _label = 'local sharpening'
 
     # --------------------------- DEFINE param functions ----------------------
     def _defineParams(self, form):
         form.addSection(label='Input')
+        form.addHidden(params.GPU_LIST, params.StringParam, default='0',
+                       label="Choose GPU IDs",
+                       help="GPU may have several cores. Set it to zero"
+                            " if you do not know what we are talking about."
+                            " First core index is 0, second 1 and so on."
+                            " You can use multiple GPUs - in that case"
+                            " set to i.e. *0 1 2*.")
 
         form.addParam('inputVolume', params.PointerParam,
                       pointerClass='Volume',
-                      important=True, label='Input volume',
-                      help='Input EM volume')
+                      important=True, label='Input EM map',
+                      help='Input EM map, should be unsharpened and unfiltered.')
+
+        form.addParam('useNNpredict', params.BooleanParam,
+                      default=False, label="Use EMmerNet predictions?",
+                      help="LocScale also supports local sharpening based "
+                           "on a physics-inspired deep neural network "
+                           "prediction method using our ensemble network "
+                           "EMmerNet.")
+
+        form.addParam('emmernetModel', params.EnumParam, default=0,
+                      condition='useNNpredict',
+                      choices=['model_based', 'model_free', 'ensemble'],
+                      label="EMmerNet model")
+
+        form.addParam('symmetryGroup', params.StringParam, default='c1',
+                      condition='not useNNpredict',
+                      label="Symmetry",
+                      help="If your map has point group symmetry, you need "
+                           "to specify the symmetry to force the pseudomodel "
+                           "generator for produce a symmetrised reference "
+                           "map for scaling.")
+
+        form.addParam('refType', params.EnumParam, default=REF_PDB,
+                      condition='not useNNpredict',
+                      choices=['None', 'PDB', 'Volume'],
+                      display=params.EnumParam.DISPLAY_HLIST,
+                      label='Reference type:')
+
+        form.addParam('refPdb', params.PointerParam,
+                      condition='refType==1 and not useNNpredict',
+                      label="Reference PDB model",
+                      pointerClass="AtomStruct", allowsNull=True,
+                      help="PDBx/mmCIF file of the reference atomic model.")
+
+        form.addParam('incompletePdb', params.BooleanParam,
+                      default=False,
+                      condition='refType==1 and not useNNpredict',
+                      label="Is atomic model partial?",
+                      help="Add pseudo-atoms to areas of the map "
+                           "which are not modelled.")
 
         form.addParam('refObj', params.PointerParam,
-                      label="Reference Volume",
-                      pointerClass='Volume',
-                      help='Choose a model to take it as reference '
+                      condition='refType==2 and not useNNpredict',
+                      label="Reference volume",
+                      pointerClass='Volume', allowsNull=True,
+                      help='Model map file take it as reference '
                            '(usually this volume should come from a PDB).')
 
+        form.addSection(label='Extra')
         form.addParam('binaryMask', params.PointerParam,
+                      condition='not useNNpredict',
                       pointerClass='VolumeMask',
-                      label='3D mask', allowsNull=True,
-                      help='Binary mask (optional)')
+                      label='3D mask (optional)', allowsNull=True,
+                      help='Binary mask')
 
-        form.addParam('patchSize', params.IntParam,
-                      label='Patch size',
-                      help='Window size for local scale.\n'
-                           'Recommended: 7 * '
-                           'average_map_resolution / pixel_size')
+        form.addParam('resol', params.IntParam, default=3,
+                      condition='not useNNpredict',
+                      label="Target resolution (A)",
+                      help="Resolution target for Refmac refinement.")
 
-        form.addParallelSection(threads=0, mpi=3)
+        form.addParam('extraParams', params.StringParam, default='',
+                      expertLevel=params.LEVEL_ADVANCED,
+                      label='Additional parameters',
+                      help="Extra command line parameters. "
+                           "See *locscale run_locscale --help*.")
+
+        form.addParallelSection(threads=3, mpi=1)
 
     # --------------------------- INSERT steps functions ----------------------
     def _insertAllSteps(self):
-        self._insertFunctionStep('convertStep')
-        self._insertFunctionStep('refineStep')
-        self._insertFunctionStep('createOutputStep')
+        self._insertFunctionStep(self.convertStep)
+        self._insertFunctionStep(self.refineStep)
+        self._insertFunctionStep(self.createOutputStep)
 
     # --------------------------- STEPS functions -----------------------------
     def convertStep(self):
         tmpFn = self._getTmpPath()
-        self.inputVolFn = convertBinaryVol(self.inputVolume.get(), tmpFn)
-        self.refVolFn = convertBinaryVol(self.refObj.get(), tmpFn)
-        if self.binaryMask.hasValue():
-            self.maskVolFn = convertBinaryVol(self.binaryMask.get(), tmpFn)
+        self.inputVolsFn = []
+        vol = self.inputVolume.get()
+        if vol.hasHalfMaps():
+            for v in vol.getHalfMaps(asList=True):
+                self.inputVolsFn.append(convertBinaryVol(v, tmpFn))
+        else:
+            self.inputVolsFn.append(convertBinaryVol(vol, tmpFn))
+
+        if not self.useNNpredict:
+            if self.refType == REF_PDB:
+                pdbFn = self.refPdb.get().getFileName()
+                self.refPdbFn = self._getTmpPath(os.path.basename(pdbFn))
+                createLink(pdbFn, self.refPdbFn)
+            elif self.refType == REF_VOL:
+                self.refVolFn = convertBinaryVol(self.refObj.get(), tmpFn)
+
+            if self.binaryMask.hasValue():
+                self.maskVolFn = convertBinaryVol(self.binaryMask.get(), tmpFn)
 
     def refineStep(self):
-        """ Run the LocScale program (with EMAN enviroment)
-            to refine a volume.
-        """
-        self.info("Launching LocScale method")
-        args = self.prepareParams()
+        """ Run the LocScale program. """
+        program = "run_emmernet" if self.useNNpredict else "run_locscale"
+        args = self.prepareParams(program)
+        if self.extraParams.hasValue():
+            args += ' ' + self.extraParams.get()
 
-        python, program, env = getEmanPythonProgram('locscale_mpi.py')
-        program_args = "%s %s" % (program, args)
-        self.runJob(python, program_args, env=env)
+        if self.numberOfMpi > 1:
+            # insert "mpirun -np X" after conda activation cmd
+            mpiCmd = self.hostConfig.mpiCommand.get() % {
+                'JOB_NODES': self.numberOfMpi,
+                'COMMAND': f"locscale {program}"}
+            cmd = f"{Plugin.getActivationCmd()} && {mpiCmd}"
+        else:
+            cmd = Plugin.getProgram(program)
+
+        env = Plugin.getEnviron(useCcp4=self.checkCcp4())
+        self.runJob(cmd, args, cwd=self._getTmpPath(),
+                    env=env, numberOfThreads=1, numberOfMpi=1)
+
+        # Move the resulting volume
+        if os.path.exists(self.getOutputFn("tmp")):
+            moveFile(self.getOutputFn("tmp"), self.getOutputFn("extra"))
 
     def createOutputStep(self):
-        """ Create the output volume
-        """
+        """ Create the output volume. """
         outputVolume = Volume()
         outputVolume.setSamplingRate(self.getSampling())
-        outputVolume.setFileName(self.getOutputFn())
+        outputVolume.setFileName(self.getOutputFn("extra"))
         self._defineOutputs(outputVolume=outputVolume)
         self._defineTransformRelation(self.inputVolume, outputVolume)
 
     # --------------------------- INFO functions ------------------------------
+    def _warnings(self):
+        warnings = []
+
+        if not self.useNNpredict and not self.checkCcp4():
+            warnings.append("CCP4 plugin is not installed. "
+                            "Refmac5 refinement will be skipped.")
+
+        return warnings
+
     def _validate(self):
-        """ We validate if eman is installed and if inputs make sense
-        """
+        """ We validate if inputs make sense. """
         errors = []
-        errors = validateEmanVersion(errors)
+
+        if self.useNNpredict and not self.inputVolume.get().hasHalfMaps():
+            errors.append("EMmerNet predictions require two halfmaps "
+                          "associated with an input volume.")
 
         inputVol = self.inputVolume.get()
+        inputSize = inputVol.getDim()
         reference = self.refObj.get()
-        if inputVol is not None and reference is not None:
-            inputSize = inputVol.getDim()
+
+        if reference is not None:
             refSize = reference.getDim()
             refSamp = reference.getSamplingRate()
 
             if inputSize != refSize or self.getSampling() != refSamp:
-                errors.append('Input volume and reference volume should be '
-                              'of the same size and sampling rate')
+                errors.append('Input map and reference volume should have '
+                              'the same size and sampling rate')
+
+        if (self.binaryMask.hasValue() and
+                self.binaryMask.get().getDim() != inputSize):
+            errors.append('Input map and binary mask should be '
+                          'of the same size')
+
+        if self.refType == REF_NONE and not self.checkCcp4():
+            errors.append("Reference type = None requires REFMAC5 refinement. "
+                          "CCP4 plugin was not found.")
+
         return errors
-
-    def _warnings(self):
-        """ The input volume and the mask should be of the same size
-            but the progran can run.
-        """
-        warnings = []
-
-        if self.binaryMask.hasValue() and \
-                self.binaryMask.get().getDim() != self.inputVolume.get().getDim():
-            warnings.append('Input volume and binary mask should be '
-                            'of the same size')
-        return warnings
 
     def _summary(self):
         summary = []
         if not hasattr(self, 'outputVolume'):
-            summary.append("Output volumes not ready yet.")
+            summary.append("Output volume not ready yet.")
         else:
-            summary.append('We obtained a sharpened volume of the %s '
-                           'using %s as reference.'
-                           % (self.getObjectTag('inputVolume'),
-                              self.getObjectTag('refObj')))
+            summary.append('We obtained a locally sharpened volume from the %s'
+                           % self.getObjectTag('inputVolume'))
         return summary
 
-    def _methods(self):
-        methods = list()
-        methods.append('LocScale has locally scaled the amplitude of the %s '
-                       'using %s as reference with a window size of %d.'
-                       % (self.getObjectTag('inputVolume'),
-                          self.getObjectTag('refObj'),
-                          self.patchSize))
-        return methods
+    # --------------------------- UTILS functions -----------------------------
+    def prepareParams(self, program="run_locscale"):
+        args = [f"--outfile {os.path.basename(self.getOutputFn('tmp'))}",
+                "--verbose"]
 
-    def _citations(self):
-        return ['Jakobi2017']
+        inputVols = ' '.join(self.inputVolsFn)
+        if len(self.inputVolsFn) > 1:
+            args.append(f"--halfmap_paths {inputVols}")
+        else:
+            args.append(f"--emmap_path {inputVols}")
 
-    # --------------------------- UTILS functions -------------------------------
-    def prepareParams(self):
-        """ The input params of the program are as follows (from source):
-        '-em', '--em_map', required=True, help='Input filename EM map')
-        '-mm', '--model_map', required=True, help='Input filename PDB map')
-        '-p', '--apix', type=float, required=True, help='pixel size in Angstrom')
-        '-ma', '--mask', help='Input filename mask')
-        '-w', '--window_size', type=int, help='window size in pixel')
-        '-o', '--outfile', required=True, help='Output filename')
-        '-mpi', '--mpi', action='store_true', default=False,
-                         help='MPI version call by: \"{0}\"'.format(mpi_cmd)
-        """
+        if program == "run_emmernet":
+            args.append(f"-trained_model {self.getEnumText('emmernetModel')}")
+            args.append(f"--gpu_ids {' '.join(str(i) for i in self.getGpuList())}")
+        else:  # run_locscale
+            args.extend([f"--apix {self.getSampling()}",
+                         f"--ref_resolution {self.resol.get()}"])
 
-        # Input volume
-        args = "--em_map '%s'" % self.inputVolFn
-        self.info("Input file: " + self.inputVolFn)
+            if self.refType == REF_VOL:
+                args.append(f"--model_map {self.refVolFn}")
+            elif self.refType == REF_PDB:
+                args.append(f"--model_coordinates {os.path.basename(self.refPdbFn)}")
+                if self.incompletePdb:
+                    args.append("--complete_model")
 
-        # Reference volume
-        args += " --model_map '%s'" % self.refVolFn
-        self.info("Model file: " + self.refVolFn)
+            if self.binaryMask.hasValue():
+                args.append(f"--mask {self.maskVolFn}")
 
-        # Samplig rate
-        args += " --apix %f" % self.getSampling()
-        self.info("Sampling rate: %f" % self.getSampling())
+            if self.symmetryGroup.get() != "c1":
+                args.append(f"--symmetry {self.symmetryGroup.get().upper()}")
 
-        # Mask
-        if self.binaryMask.hasValue():
-            args += " --mask '%s'" % self.maskVolFn
-            self.info("Mask file: " + self.maskVolFn)
+            if self.numberOfMpi > 1:
+                args.append("--mpi")
 
-        # Windows size
-        args += " --window_size %d" % self.patchSize
-        self.info("Window size: %d" % self.patchSize)
+            if self.numberOfThreads > 1:
+                args.append(f"--number_processes {self.numberOfThreads.get()}")
 
-        # MPI flag
-        if self.numberOfMpi > 1:
-            args += " -mpi"
+            if not self.checkCcp4():
+                args.append("--skip_refine")
 
-        # Output file
-        args += " -o '%s'" % self.getOutputFn()
-        self.info("Output file: " + self.getOutputFn())
-
-        return args
+        return " ".join(args)
 
     def getSampling(self):
         return self.inputVolume.get().getSamplingRate()
 
-    def getOutputFn(self):
+    def getOutputFn(self, folder):
         """ Returns the scaled output file name. """
-        outputFnBase = removeBaseExt(self.inputVolFn)
+        outputFnBase = removeBaseExt(self.inputVolume.get().getFileName())
+        return self._getPath(folder, outputFnBase) + '_scaled.mrc'
 
-        return self._getExtraPath(outputFnBase) + '_scaled.mrc'
+    def checkCcp4(self):
+        return Plugin.getCcp4Plugin()

@@ -1,10 +1,10 @@
 # ***************************************************************************
 # *
-# * Authors:     David Maluenda (dmaluenda@cnb.csic.es) (2018)
+# * Authors:     David Maluenda (dmaluenda@cnb.csic.es)
 # *
 # * This program is free software; you can redistribute it and/or modify
 # * it under the terms of the GNU General Public License as published by
-# * the Free Software Foundation; either version 2 of the License, or
+# * the Free Software Foundation; either version 3 of the License, or
 # * (at your option) any later version.
 # *
 # * This program is distributed in the hope that it will be useful,
@@ -22,7 +22,7 @@
 # ***************************************************************************
 
 from pyworkflow.tests import BaseTest, setupTestProject, DataSet
-from pwem.protocols import ProtImportVolumes, ProtImportMask
+from pwem.protocols import ProtImportVolumes, ProtImportPdb
 from pyworkflow.utils import magentaStr
 
 from ..protocols import ProtLocScale
@@ -30,95 +30,75 @@ from ..protocols import ProtLocScale
 
 class TestProtLocscale(BaseTest):
     @classmethod
+    def runImportVolumes(cls, samplingRate, vol, half1, half2):
+        """ Run Import volumes protocol. """
+        cls.protImport = cls.newProtocol(ProtImportVolumes,
+                                         filesPath=vol,
+                                         samplingRate=samplingRate,
+                                         setHalfMaps=True,
+                                         half1map=half1,
+                                         half2map=half2)
+        cls.launchProtocol(cls.protImport)
+        return cls.protImport
+
+    @classmethod
     def setUpClass(cls):
         setupTestProject(cls)
-        cls.dataSet = DataSet.getDataSet('xmipp_tutorial')
+        cls.ds = DataSet.getDataSet('model_building_tutorial')
+        cls.half1 = cls.ds.getFile('volumes/emd_3488_Noisy_half1.vol')
+        cls.half2 = cls.ds.getFile('volumes/emd_3488_Noisy_half2.vol')
+        cls.map = cls.ds.getFile('volumes/emd_3488.map')
+        cls.model = cls.ds.getFile('PDBx_mmCIF/5ni1.pdb')
 
-        # Imports
-        print(magentaStr("\n==> Importing data - Input data"))
-        new = cls.proj.newProtocol  # short notation
-        launch = cls.proj.launchProtocol
+        print(magentaStr("\n==> Importing data - volume:"))
+        cls.protImportMap = cls.runImportVolumes(1.05,
+                                                 cls.map,
+                                                 cls.half1,
+                                                 cls.half2)
 
-        # Volumes
-        print(magentaStr("\nImporting Volumes:"))
-        pImpVolume = new(ProtImportVolumes, samplingRate=1,
-                         filesPath=cls.dataSet.getFile('vol2'))
-        launch(pImpVolume, wait=True)
-        #   volume.vol
-        cls.inputVol = pImpVolume.outputVolume
-        pImpVolume2 = new(ProtImportVolumes, samplingRate=1,
-                          filesPath=cls.dataSet.getFile('vol1'))
-        launch(pImpVolume2, wait=True)
-        cls.inputVol2 = pImpVolume2.outputVolume
-
-        # References
-        print(magentaStr("\nImporting References:"))
-        pImpRef = new(ProtImportVolumes, samplingRate=1,
-                      filesPath=cls.dataSet.getFile('vol3'))
-        launch(pImpRef, wait=True)
-        #   reference.vol
-        cls.inputRef = pImpRef.outputVolume
-        pImpRef2 = new(ProtImportVolumes, samplingRate=1,
-                       filesPath=cls.dataSet.getFile('vol1'))
-        launch(pImpRef2, wait=True)
-        cls.inputRef2 = pImpRef2.outputVolume
-
-        # Masks
-        print(magentaStr("\nImporting Mask:"))
-        pImpMask = new(ProtImportMask,
-                       maskPath=cls.dataSet.getFile('mask3d'),
-                       samplingRate=1)
-        launch(pImpMask, wait=True)
-        cls.mask = pImpMask.outputMask
+        print(magentaStr("\n==> Importing data - pdb:"))
+        cls.protImportModel = cls.newProtocol(ProtImportPdb,
+                                              inputPdbData=1,
+                                              pdbFile=cls.model)
+        cls.launchProtocol(cls.protImportModel)
 
     def testLocscale(self):
-        """ Check that an output was generated and the condition is valid.
-            In addition, returns the size of the set.
-        """
-        print(magentaStr("\n==> Testing locscale:"))
+        def launchTest(label, vol, volRef=None, pdbRef=None, useNN=False):
+            print(magentaStr(f"\n==> Testing locscale ({label}):"))
+            pLocScale = self.newProtocol(ProtLocScale,
+                                         objLabel='locscale - ' + label,
+                                         inputVolume=vol)
+            if useNN:
+                pLocScale.useNNpredict.set(True)
+            else:
+                if volRef is not None:
+                    pLocScale.refType.set(2)
+                    pLocScale.refObj.set(volRef)
+                elif pdbRef is not None:
+                    pLocScale.refType.set(1)
+                    pLocScale.refPdb.set(pdbRef)
+                else:
+                    pLocScale.refType.set(0)
 
-        def launchTest(label, vol, ref, mask=None, mpi=3):
-            print(magentaStr("\nTest %s:" % label))
-            pLocScale = self.proj.newProtocol(ProtLocScale,
-                                              objLabel='locscale - ' + label,
-                                              inputVolume=vol,
-                                              refObj=ref,
-                                              patchSize=16,
-                                              binaryMask=mask,
-                                              numberOfMpi=mpi)
-            self.proj.launchProtocol(pLocScale, wait=True)
+            self.launchProtocol(pLocScale, wait=True)
 
             self.assertIsNotNone(pLocScale.outputVolume,
-                                 "outputVolume is None for %s test." % label)
+                                 "outputVolume is None for %s test" % label)
 
-            self.assertEqual(self.inputVol.getDim(),
+            self.assertEqual(vol.getDim(),
                              pLocScale.outputVolume.getDim(),
-                             "outputVolume has diferent size than inputVol "
+                             "outputVolume has a different size than inputVol "
                              "for %s test" % label)
 
-            self.assertEqual(self.inputVol.getSamplingRate(),
+            self.assertEqual(vol.getSamplingRate(),
                              pLocScale.outputVolume.getSamplingRate(),
-                             "outputVolume has diferent sampling rate than "
+                             "outputVolume has a different sampling rate than "
                              "inputVol for %s test" % label)
 
-        # default test
-        launchTest('with MPI + noMask', vol=self.inputVol, ref=self.inputRef)
+        inputVol = self.protImportMap.outputVolume
+        pdbRef = self.protImportModel.outputPdb
 
-        # with mask test
-        launchTest('with MPI + Mask', vol=self.inputVol, ref=self.inputRef,
-                   mask=self.mask)
-
-        # with mask test
-        launchTest('with Mask + noMPI', vol=self.inputVol, ref=self.inputRef,
-                   mask=self.mask, mpi=1)
-
-        # without MPI
-        launchTest('noMask + noMPI', vol=self.inputVol, ref=self.inputRef,
-                   mpi=1)
-
-        # convert input volume
-        launchTest('convert inputVol', vol=self.inputVol2, ref=self.inputRef)
-
-        # convert reference volume
-        launchTest('convert reference', vol=self.inputVol, ref=self.inputRef2,
-                   mask=self.mask)
+        #launchTest('noRef', vol=inputVol)
+        #launchTest('volRef', vol=inputVol, volRef=volRef)  # TODO: test reference volume case
+        launchTest('pdbRef', vol=inputVol, pdbRef=pdbRef)
+        launchTest('EMmerNet', vol=inputVol, useNN=True)

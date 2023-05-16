@@ -7,7 +7,7 @@
 # *
 # * This program is free software; you can redistribute it and/or modify
 # * it under the terms of the GNU General Public License as published by
-# * the Free Software Foundation; either version 2 of the License, or
+# * the Free Software Foundation; either version 3 of the License, or
 # * (at your option) any later version.
 # *
 # * This program is distributed in the hope that it will be useful,
@@ -26,6 +26,17 @@
 # **************************************************************************
 
 """
+@article{Bharadwaj2022,
+author = "Bharadwaj, Alok and Jakobi, Arjen J.",
+title = "Electron scattering properties of biological macromolecules and their use for cryo-EM map sharpening",
+journal = "Faraday Discuss.",
+year = "2022",
+volume = "240",
+issue = "0",
+pages = "168-183",
+publisher = "The Royal Society of Chemistry",
+doi = "http://dx.doi.org/10.1039/D2FD00078D"
+}
 
 @article{Jakobi2017,
   Title                    = {Model-based local density sharpening of cryo-EM maps},
