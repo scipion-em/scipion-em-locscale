@@ -33,7 +33,7 @@ from pyworkflow import Config
 
 from .constants import *
 
-__version__ = '3.1'
+__version__ = '3.1.1'
 _logo = "locscale_logo.jpg"
 _references = ['Jakobi2017', 'Bharadwaj2022']
 
@@ -120,7 +120,6 @@ class Plugin(pwem.Plugin):
         ENV_NAME = f"locscale-{version}"
         FLAG = f"locscale_{version}_installed"
 
-        # try to get CONDA activation command
         installCmds = [
             'touch refmac5 && chmod a+x refmac5 &&',  # fake binary for installer to work
             cls.getCondaActivationCmd(),
