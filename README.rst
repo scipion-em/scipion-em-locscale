@@ -62,7 +62,7 @@ python with conda ones. One example of this could can be seen below but
 depending on your conda version and shell you will need something different:
 CONDA_ACTIVATION_CMD = eval "$(/extra/miniconda3/bin/conda shell.bash hook)"
 
-*LOCSCALE_ENV_ACTIVATION* (default = conda activate locscale-2.1):
+*LOCSCALE_ENV_ACTIVATION* (default = conda activate locscale-2.2.3):
 Command to activate the LocScale environment.
 
 
@@ -75,7 +75,7 @@ To check the installation, simply run the following Scipion test:
 Supported versions
 ------------------
 
-2.1
+2.1, 2.2.3
 
 Protocols
 ---------
