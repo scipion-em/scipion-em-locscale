@@ -26,7 +26,8 @@
 
 # Supported versions
 V2_1 = '2.1'
-VERSIONS = [V2_1]
+V2_2_3 = '2.2.3'
+VERSIONS = [V2_1, V2_2_3]
 LOCSCALE_DEFAULT_VER_NUM = VERSIONS[-1]
 
 DEFAULT_ENV_NAME = f"locscale-{LOCSCALE_DEFAULT_VER_NUM}"

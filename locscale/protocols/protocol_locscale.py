@@ -32,7 +32,7 @@ from pwem.emlib.image import ImageHandler
 from pyworkflow.protocol import params
 import pyworkflow.utils as pwutils
 
-from locscale.constants import REF_VOL, REF_PDB, REF_NONE
+from locscale.constants import REF_VOL, REF_PDB, REF_NONE, V2_1
 from locscale import Plugin
 
 
@@ -70,9 +70,14 @@ class ProtLocScale(ProtFilterVolumes):
                            "prediction method using our ensemble network "
                            "EMmerNet.")
 
+        if self.isOldVersion():
+            models = ['model_based', 'model_free', 'ensemble']
+        else:
+            models = ['high_context', 'low_context']
+
         form.addParam('emmernetModel', params.EnumParam, default=0,
                       condition='useNNpredict',
-                      choices=['model_based', 'model_free', 'ensemble'],
+                      choices=models,
                       label="EMmerNet model")
 
         form.addParam('symmetryGroup', params.StringParam, default='c1',
@@ -160,8 +165,12 @@ class ProtLocScale(ProtFilterVolumes):
 
     def refineStep(self, objId):
         """ Run the LocScale program. """
-        program = "run_emmernet" if self.useNNpredict else "run_locscale"
-        args = self.prepareParams(program)
+        if self.isOldVersion():
+            program = "run_emmernet" if self.useNNpredict else "run_locscale"
+        else:
+            program = "feature_enhance" if self.useNNpredict else ""
+
+        args = self.prepareParams()
         if self.extraParams.hasValue():
             args += ' ' + self.extraParams.get()
 
@@ -179,9 +188,14 @@ class ProtLocScale(ProtFilterVolumes):
                     env=env, numberOfThreads=1, numberOfMpi=1)
 
         # Move the resulting volume
-        if os.path.exists(self.getOutputFn("tmp")):
-            pwutils.moveFile(self.getOutputFn("tmp"),
-                             self.getOutputFn("extra"))
+        if self.useNNpredict and not self.isOldVersion():
+            outputFn = self.getOutputFn("tmp").replace(".mrc",
+                                                       "_locscale_output.mrc")
+        else:
+            outputFn = self.getOutputFn("tmp")
+
+        if os.path.exists(outputFn):
+            pwutils.moveFile(outputFn, self.getOutputFn("extra"))
 
     def createOutputStep(self, objId):
         """ Create the output volume. """
@@ -242,7 +256,7 @@ class ProtLocScale(ProtFilterVolumes):
         return summary
 
     # --------------------------- UTILS functions -----------------------------
-    def prepareParams(self, program="run_locscale"):
+    def prepareParams(self):
         args = [f"--outfile {os.path.basename(self.getOutputFn('tmp'))}",
                 "--verbose"]
 
@@ -252,10 +266,15 @@ class ProtLocScale(ProtFilterVolumes):
         else:
             args.append(f"--emmap_path {inputVols}")
 
-        if program == "run_emmernet":
-            args.append(f"-trained_model {self.getEnumText('emmernetModel')}")
+        if self.useNNpredict:
+            model = self.getEnumText('emmernetModel')
             args.append(f"--gpu_ids {' '.join(str(i) for i in self.getGpuList())}")
-        else:  # run_locscale
+            if self.isOldVersion():
+                args.append(f"-trained_model {model}")
+            elif model == "low_context":
+                args.append("--use_low_context_model")
+
+        else:
             args.extend([f"--apix {self.getSampling()}",
                          f"--ref_resolution {self.resol.get()}"])
 
@@ -317,3 +336,7 @@ class ProtLocScale(ProtFilterVolumes):
             pwutils.createAbsLink(os.path.abspath(fn), newFn)
 
         return os.path.basename(newFn)
+
+    def isOldVersion(self):
+        """ Version 2.1 has a different API. """
+        return Plugin.getActiveVersion() == V2_1
