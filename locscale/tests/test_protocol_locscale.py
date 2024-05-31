@@ -98,7 +98,7 @@ class TestProtLocscale(BaseTest):
         inputVol = self.protImportMap.outputVolume
         pdbRef = self.protImportModel.outputPdb
 
-        launchTest('noRef', vol=inputVol)
+        #launchTest('noRef', vol=inputVol)  # requires CCP4
         #launchTest('volRef', vol=inputVol, volRef=volRef)  # TODO: test reference volume case
         launchTest('pdbRef', vol=inputVol, pdbRef=pdbRef)
         launchTest('EMmerNet', vol=inputVol, useNN=True)
