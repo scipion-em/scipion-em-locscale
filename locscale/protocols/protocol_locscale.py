@@ -24,22 +24,28 @@
 # *
 # **************************************************************************
 import os
+from enum import Enum
 
-from pwem.protocols import Prot3D
+from pwem.protocols import ProtFilterVolumes
 from pwem.objects import Volume
+from pwem.emlib.image import ImageHandler
 from pyworkflow.protocol import params
-from pyworkflow.utils import removeBaseExt, createLink, moveFile
+import pyworkflow.utils as pwutils
 
-from ..convert import convertBinaryVol
-from ..constants import REF_VOL, REF_PDB, REF_NONE
-from .. import Plugin
+from locscale.constants import REF_VOL, REF_PDB, REF_NONE, V2_1
+from locscale import Plugin
 
 
-class ProtLocScale(Prot3D):
+class outputs(Enum):
+    Volume = Volume
+
+
+class ProtLocScale(ProtFilterVolumes):
     """ This protocol computes contrast-enhanced cryo-EM maps
         by local amplitude scaling, optionally using a reference model.
     """
     _label = 'local sharpening'
+    _possibleOutputs = outputs
 
     # --------------------------- DEFINE param functions ----------------------
     def _defineParams(self, form):
@@ -64,9 +70,14 @@ class ProtLocScale(Prot3D):
                            "prediction method using our ensemble network "
                            "EMmerNet.")
 
+        if self.isOldVersion():
+            models = ['model_based', 'model_free', 'ensemble']
+        else:
+            models = ['high_context', 'low_context']
+
         form.addParam('emmernetModel', params.EnumParam, default=0,
                       condition='useNNpredict',
-                      choices=['model_based', 'model_free', 'ensemble'],
+                      choices=models,
                       label="EMmerNet model")
 
         form.addParam('symmetryGroup', params.StringParam, default='c1',
@@ -125,36 +136,41 @@ class ProtLocScale(Prot3D):
 
     # --------------------------- INSERT steps functions ----------------------
     def _insertAllSteps(self):
-        self._insertFunctionStep(self.convertStep)
-        self._insertFunctionStep(self.refineStep)
-        self._insertFunctionStep(self.createOutputStep)
+        self.inputVolsFn = []
+        objId = self.getInputVol().getObjId()
+        self._insertFunctionStep(self.convertStep, objId)
+        self._insertFunctionStep(self.refineStep, objId)
+        self._insertFunctionStep(self.createOutputStep, objId)
 
     # --------------------------- STEPS functions -----------------------------
-    def convertStep(self):
+    def convertStep(self, objId):
         tmpFn = self._getTmpPath()
-        self.inputVolsFn = []
-        vol = self.inputVolume.get()
+        vol = self.getInputVol()
         if vol.hasHalfMaps():
             for v in vol.getHalfMaps(asList=True):
-                self.inputVolsFn.append(convertBinaryVol(v, tmpFn))
+                self.inputVolsFn.append(self.convertBinaryVol(v, tmpFn))
         else:
-            self.inputVolsFn.append(convertBinaryVol(vol, tmpFn))
+            self.inputVolsFn.append(self.convertBinaryVol(vol, tmpFn))
 
         if not self.useNNpredict:
             if self.refType == REF_PDB:
                 pdbFn = self.refPdb.get().getFileName()
                 self.refPdbFn = self._getTmpPath(os.path.basename(pdbFn))
-                createLink(pdbFn, self.refPdbFn)
+                pwutils.createLink(pdbFn, self.refPdbFn)
             elif self.refType == REF_VOL:
-                self.refVolFn = convertBinaryVol(self.refObj.get(), tmpFn)
+                self.refVolFn = self.convertBinaryVol(self.refObj.get(), tmpFn)
 
             if self.binaryMask.hasValue():
-                self.maskVolFn = convertBinaryVol(self.binaryMask.get(), tmpFn)
+                self.maskVolFn = self.convertBinaryVol(self.binaryMask.get(), tmpFn)
 
-    def refineStep(self):
+    def refineStep(self, objId):
         """ Run the LocScale program. """
-        program = "run_emmernet" if self.useNNpredict else "run_locscale"
-        args = self.prepareParams(program)
+        if self.isOldVersion():
+            program = "run_emmernet" if self.useNNpredict else "run_locscale"
+        else:
+            program = "feature_enhance" if self.useNNpredict else ""
+
+        args = self.prepareParams()
         if self.extraParams.hasValue():
             args += ' ' + self.extraParams.get()
 
@@ -172,16 +188,23 @@ class ProtLocScale(Prot3D):
                     env=env, numberOfThreads=1, numberOfMpi=1)
 
         # Move the resulting volume
-        if os.path.exists(self.getOutputFn("tmp")):
-            moveFile(self.getOutputFn("tmp"), self.getOutputFn("extra"))
+        if self.useNNpredict and not self.isOldVersion():
+            outputFn = self.getOutputFn("tmp").replace(".mrc",
+                                                       "_locscale_output.mrc")
+        else:
+            outputFn = self.getOutputFn("tmp")
 
-    def createOutputStep(self):
+        if os.path.exists(outputFn):
+            pwutils.moveFile(outputFn, self.getOutputFn("extra"))
+
+    def createOutputStep(self, objId):
         """ Create the output volume. """
         outputVolume = Volume()
         outputVolume.setSamplingRate(self.getSampling())
         outputVolume.setFileName(self.getOutputFn("extra"))
-        self._defineOutputs(outputVolume=outputVolume)
-        self._defineTransformRelation(self.inputVolume, outputVolume)
+        self._defineOutputs(**{outputs.Volume.name: outputVolume})
+        self._defineTransformRelation(self.getInputVol(pointer=True),
+                                      outputVolume)
 
     # --------------------------- INFO functions ------------------------------
     def _warnings(self):
@@ -197,12 +220,11 @@ class ProtLocScale(Prot3D):
         """ We validate if inputs make sense. """
         errors = []
 
-        if self.useNNpredict and not self.inputVolume.get().hasHalfMaps():
+        if self.useNNpredict and not self.getInputVol().hasHalfMaps():
             errors.append("EMmerNet predictions require two halfmaps "
                           "associated with an input volume.")
 
-        inputVol = self.inputVolume.get()
-        inputSize = inputVol.getDim()
+        inputSize = self.getInputVol().getDim()
         reference = self.refObj.get()
 
         if reference is not None:
@@ -226,7 +248,7 @@ class ProtLocScale(Prot3D):
 
     def _summary(self):
         summary = []
-        if not hasattr(self, 'outputVolume'):
+        if not hasattr(self, outputs.Volume.name):
             summary.append("Output volume not ready yet.")
         else:
             summary.append('We obtained a locally sharpened volume from the %s'
@@ -234,7 +256,7 @@ class ProtLocScale(Prot3D):
         return summary
 
     # --------------------------- UTILS functions -----------------------------
-    def prepareParams(self, program="run_locscale"):
+    def prepareParams(self):
         args = [f"--outfile {os.path.basename(self.getOutputFn('tmp'))}",
                 "--verbose"]
 
@@ -244,10 +266,15 @@ class ProtLocScale(Prot3D):
         else:
             args.append(f"--emmap_path {inputVols}")
 
-        if program == "run_emmernet":
-            args.append(f"-trained_model {self.getEnumText('emmernetModel')}")
+        if self.useNNpredict:
+            model = self.getEnumText('emmernetModel')
             args.append(f"--gpu_ids {' '.join(str(i) for i in self.getGpuList())}")
-        else:  # run_locscale
+            if self.isOldVersion():
+                args.append(f"-trained_model {model}")
+            elif model == "low_context":
+                args.append("--use_low_context_model")
+
+        else:
             args.extend([f"--apix {self.getSampling()}",
                          f"--ref_resolution {self.resol.get()}"])
 
@@ -275,13 +302,41 @@ class ProtLocScale(Prot3D):
 
         return " ".join(args)
 
+    def getInputVol(self, pointer=False):
+        return self.inputVolume if pointer else self.inputVolume.get()
+
     def getSampling(self):
-        return self.inputVolume.get().getSamplingRate()
+        return self.getInputVol().getSamplingRate()
 
     def getOutputFn(self, folder):
         """ Returns the scaled output file name. """
-        outputFnBase = removeBaseExt(self.inputVolume.get().getFileName())
+        outputFnBase = pwutils.removeBaseExt(self.getInputVol().getFileName())
         return self._getPath(folder, outputFnBase) + '_scaled.mrc'
 
     def checkCcp4(self):
         return Plugin.getCcp4Plugin()
+
+    @staticmethod
+    def convertBinaryVol(vol, outputDir):
+        """ Convert binary volume to mrc format.
+        Params:
+            vol: input volume object to be converted.
+            outputDir: where to put the converted file(s)
+        Return:
+            new file name of the volume (converted or not).
+        """
+
+        ih = ImageHandler()
+        fn = vol if isinstance(vol, str) else vol.getFileName()
+        newFn = os.path.join(outputDir, pwutils.replaceBaseExt(fn, 'mrc'))
+
+        if not fn.endswith('.mrc'):
+            ih.convert(fn, newFn)
+        else:
+            pwutils.createAbsLink(os.path.abspath(fn), newFn)
+
+        return os.path.basename(newFn)
+
+    def isOldVersion(self):
+        """ Version 2.1 has a different API. """
+        return Plugin.getActiveVersion() == V2_1

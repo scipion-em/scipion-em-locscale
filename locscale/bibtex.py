@@ -35,7 +35,7 @@ volume = "240",
 issue = "0",
 pages = "168-183",
 publisher = "The Royal Society of Chemistry",
-doi = "http://dx.doi.org/10.1039/D2FD00078D"
+doi = "https://dx.doi.org/10.1039/D2FD00078D"
 }
 
 @article{Jakobi2017,
@@ -45,8 +45,8 @@ doi = "http://dx.doi.org/10.1039/D2FD00078D"
   Year                     = {2017},
   Month                    = {October},
   Volume                   = {6},
-  Doi                      = {http://doi.org/10.7554/eLife.27131},
-  Url                      = {http://elifesciences.org/articles/27131},
+  Doi                      = {https://doi.org/10.7554/eLife.27131},
+  Url                      = {https://elifesciences.org/articles/27131},
   Citation                 = {eLife 2017;6:e27131},
   Issn                     = {2050-084X},
   Publisher                = {eLife Sciences Publications, Ltd}

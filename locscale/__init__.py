@@ -33,13 +33,13 @@ from pyworkflow import Config
 
 from .constants import *
 
-__version__ = '3.1'
+__version__ = '3.1.2'
 _logo = "locscale_logo.jpg"
 _references = ['Jakobi2017', 'Bharadwaj2022']
 
 
 class Plugin(pwem.Plugin):
-    _supportedVersions = [V2_1]
+    _supportedVersions = [V2_1, V2_2_3]
     _url = "https://github.com/scipion-em/scipion-em-locscale"
 
     @classmethod
@@ -105,7 +105,7 @@ class Plugin(pwem.Plugin):
                           cls.getLocscaleEnvActivation())
 
     @classmethod
-    def getProgram(cls, program="run_locscale"):
+    def getProgram(cls, program=""):
         """ Create LocScale command line. """
         return f"{cls.getActivationCmd()} && locscale {program} "
 
@@ -119,13 +119,14 @@ class Plugin(pwem.Plugin):
     def addLocscalePackage(cls, env, version, default=False):
         ENV_NAME = f"locscale-{version}"
         FLAG = f"locscale_{version}_installed"
+        pipVersion = "2.1.6" if version == V2_1 else version
 
-        # try to get CONDA activation command
         installCmds = [
             'touch refmac5 && chmod a+x refmac5 &&',  # fake binary for installer to work
             cls.getCondaActivationCmd(),
             f'conda create -y -n {ENV_NAME} python=3.8 gfortran -c conda-forge &&',
-            f'conda activate {ENV_NAME} && pip install scikit-learn locscale &&',
+            f'conda activate {ENV_NAME} &&',
+            f'pip install scikit-learn locscale=={pipVersion} &&',
             'rm -f refmac5 &&',
             f'touch {FLAG}'  # Flag installation finished
         ]

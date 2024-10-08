@@ -1,3 +1,5 @@
+3.1.2 - add locscale 2.2.3
+3.1.1 - maintenance release
 3.1 - refactor to support locscale 2.1
 3.0.5 - update eman versions
 07/12/2019 - Migrated to python3

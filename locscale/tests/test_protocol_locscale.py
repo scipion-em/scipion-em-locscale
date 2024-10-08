@@ -25,7 +25,7 @@ from pyworkflow.tests import BaseTest, setupTestProject, DataSet
 from pwem.protocols import ProtImportVolumes, ProtImportPdb
 from pyworkflow.utils import magentaStr
 
-from ..protocols import ProtLocScale
+from locscale.protocols import ProtLocScale
 
 
 class TestProtLocscale(BaseTest):
@@ -81,24 +81,24 @@ class TestProtLocscale(BaseTest):
                     pLocScale.refType.set(0)
 
             self.launchProtocol(pLocScale, wait=True)
-
-            self.assertIsNotNone(pLocScale.outputVolume,
+            outputName = ProtLocScale._possibleOutputs.Volume.name
+            self.assertIsNotNone(getattr(pLocScale, outputName),
                                  "outputVolume is None for %s test" % label)
 
             self.assertEqual(vol.getDim(),
-                             pLocScale.outputVolume.getDim(),
+                             getattr(pLocScale, outputName).getDim(),
                              "outputVolume has a different size than inputVol "
                              "for %s test" % label)
 
             self.assertEqual(vol.getSamplingRate(),
-                             pLocScale.outputVolume.getSamplingRate(),
+                             getattr(pLocScale, outputName).getSamplingRate(),
                              "outputVolume has a different sampling rate than "
                              "inputVol for %s test" % label)
 
         inputVol = self.protImportMap.outputVolume
         pdbRef = self.protImportModel.outputPdb
 
-        #launchTest('noRef', vol=inputVol)
+        #launchTest('noRef', vol=inputVol)  # requires CCP4
         #launchTest('volRef', vol=inputVol, volRef=volRef)  # TODO: test reference volume case
         launchTest('pdbRef', vol=inputVol, pdbRef=pdbRef)
         launchTest('EMmerNet', vol=inputVol, useNN=True)
