@@ -32,7 +32,7 @@ from pwem.emlib.image import ImageHandler
 from pyworkflow.protocol import params
 import pyworkflow.utils as pwutils
 
-from locscale.constants import REF_VOL, REF_PDB, REF_NONE, V2_1
+from locscale.constants import REF_VOL, REF_PDB, REF_NONE
 from locscale import Plugin
 
 
@@ -64,31 +64,31 @@ class ProtLocScale(ProtFilterVolumes):
                       help='Input EM map, should be unsharpened and unfiltered.')
 
         form.addParam('useNNpredict', params.BooleanParam,
-                      default=False, label="Use EMmerNet predictions?",
-                      help="LocScale also supports local sharpening based "
-                           "on a physics-inspired deep neural network "
-                           "prediction method using our ensemble network "
-                           "EMmerNet.")
-
-        if self.isOldVersion():
-            models = ['model_based', 'model_free', 'ensemble']
-        else:
-            models = ['high_context', 'low_context']
+                      default=True, label="Produce feature-enhanced map?",
+                      help="LocScale also supports confidence-weighted density "
+                           "modification based on a Bayesian-approximate implementation "
+                           "of EMmerNet, which strives to simultaneously optimise "
+                           "high-resolution detail and contrast of low(er) "
+                           "resolution map regions or contextual structure. To "
+                           "mitigate any risk of bias from network hallucination, "
+                           "LocScale integrates this procedure with calculate a "
+                           "per-pixel confidence score that effectively highlights "
+                           "regions requiring cautious interpretation.")
 
         form.addParam('emmernetModel', params.EnumParam, default=0,
+                      expertLevel=params.LEVEL_ADVANCED,
                       condition='useNNpredict',
-                      choices=models,
+                      choices=['high_context', 'low_context'],
                       label="EMmerNet model")
 
         form.addParam('symmetryGroup', params.StringParam, default='c1',
-                      condition='not useNNpredict',
                       label="Symmetry",
                       help="If your map has point group symmetry, you need "
                            "to specify the symmetry to force the pseudomodel "
                            "generator for produce a symmetrised reference "
                            "map for scaling.")
 
-        form.addParam('refType', params.EnumParam, default=REF_PDB,
+        form.addParam('refType', params.EnumParam, default=REF_NONE,
                       condition='not useNNpredict',
                       choices=['None', 'PDB', 'Volume'],
                       display=params.EnumParam.DISPLAY_HLIST,
@@ -138,9 +138,9 @@ class ProtLocScale(ProtFilterVolumes):
     def _insertAllSteps(self):
         self.inputVolsFn = []
         objId = self.getInputVol().getObjId()
-        self._insertFunctionStep(self.convertStep, objId)
-        self._insertFunctionStep(self.refineStep, objId)
-        self._insertFunctionStep(self.createOutputStep, objId)
+        self._insertFunctionStep(self.convertStep, objId, needsGPU=False)
+        self._insertFunctionStep(self.refineStep, objId, needsGPU=True)
+        self._insertFunctionStep(self.createOutputStep, objId, needsGPU=False)
 
     # --------------------------- STEPS functions -----------------------------
     def convertStep(self, objId):
@@ -165,11 +165,7 @@ class ProtLocScale(ProtFilterVolumes):
 
     def refineStep(self, objId):
         """ Run the LocScale program. """
-        if self.isOldVersion():
-            program = "run_emmernet" if self.useNNpredict else "run_locscale"
-        else:
-            program = "feature_enhance" if self.useNNpredict else ""
-
+        program = "feature_enhance" if self.useNNpredict else ""
         args = self.prepareParams()
         if self.extraParams.hasValue():
             args += ' ' + self.extraParams.get()
@@ -188,7 +184,7 @@ class ProtLocScale(ProtFilterVolumes):
                     env=env, numberOfThreads=1, numberOfMpi=1)
 
         # Move the resulting volume
-        if self.useNNpredict and not self.isOldVersion():
+        if self.useNNpredict:
             outputFn = self.getOutputFn("tmp").replace(".mrc",
                                                        "_locscale_output.mrc")
         else:
@@ -196,6 +192,10 @@ class ProtLocScale(ProtFilterVolumes):
 
         if os.path.exists(outputFn):
             pwutils.moveFile(outputFn, self.getOutputFn("extra"))
+
+        if os.path.exists(self._getTmpPath("pVDDT.mrc")):
+            pwutils.moveFile(self._getTmpPath("pVDDT.mrc"),
+                             self._getExtraPath("pVDDT.mrc"))
 
     def createOutputStep(self, objId):
         """ Create the output volume. """
@@ -220,9 +220,6 @@ class ProtLocScale(ProtFilterVolumes):
         """ We validate if inputs make sense. """
         errors = []
 
-        if self.useNNpredict and not self.getInputVol().hasHalfMaps():
-            errors.append("EMmerNet predictions require two halfmaps "
-                          "associated with an input volume.")
 
         inputSize = self.getInputVol().getDim()
         reference = self.refObj.get()
@@ -243,6 +240,9 @@ class ProtLocScale(ProtFilterVolumes):
         if self.refType == REF_NONE and not self.checkCcp4():
             errors.append("Reference type = None requires REFMAC5 refinement. "
                           "CCP4 plugin was not found.")
+
+        if self.refType == REF_PDB and not self.refPdb.hasValue():
+            errors.append("Input PDB reference is missing.")
 
         return errors
 
@@ -269,9 +269,7 @@ class ProtLocScale(ProtFilterVolumes):
         if self.useNNpredict:
             model = self.getEnumText('emmernetModel')
             args.append(f"--gpu_ids {' '.join(str(i) for i in self.getGpuList())}")
-            if self.isOldVersion():
-                args.append(f"-trained_model {model}")
-            elif model == "low_context":
+            if model == "low_context":
                 args.append("--use_low_context_model")
 
         else:
@@ -284,6 +282,8 @@ class ProtLocScale(ProtFilterVolumes):
                 args.append(f"--model_coordinates {os.path.basename(self.refPdbFn)}")
                 if self.incompletePdb:
                     args.append("--complete_model")
+            else:
+                args.append(f"--gpu_ids {' '.join(str(i) for i in self.getGpuList())}")
 
             if self.binaryMask.hasValue():
                 args.append(f"--mask {self.maskVolFn}")
@@ -336,7 +336,3 @@ class ProtLocScale(ProtFilterVolumes):
             pwutils.createAbsLink(os.path.abspath(fn), newFn)
 
         return os.path.basename(newFn)
-
-    def isOldVersion(self):
-        """ Version 2.1 has a different API. """
-        return Plugin.getActiveVersion() == V2_1

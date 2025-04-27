@@ -2,7 +2,7 @@
 Locscale plugin
 ===============
 
-This plugin provides a wrapper around `LocScale <https://gitlab.tudelft.nl/aj-lab/locscale>`_ program for local sharpening of cryo-EM density maps.
+This plugin provides a wrapper around `LocScale <https://locscale.readthedocs.io/>`_ program for local sharpening of cryo-EM density maps.
 
 .. image:: https://img.shields.io/pypi/v/scipion-em-locscale.svg
         :target: https://pypi.python.org/pypi/scipion-em-locscale
@@ -62,7 +62,7 @@ python with conda ones. One example of this could can be seen below but
 depending on your conda version and shell you will need something different:
 CONDA_ACTIVATION_CMD = eval "$(/extra/miniconda3/bin/conda shell.bash hook)"
 
-*LOCSCALE_ENV_ACTIVATION* (default = conda activate locscale-2.2.3):
+*LOCSCALE_ENV_ACTIVATION* (default = conda activate locscale-2.3.0):
 Command to activate the LocScale environment.
 
 
@@ -75,7 +75,7 @@ To check the installation, simply run the following Scipion test:
 Supported versions
 ------------------
 
-2.1, 2.2.3
+2.2.3, 2.3.0
 
 Protocols
 ---------

@@ -1,3 +1,7 @@
+3.2:
+    - add v2.3.0
+    - switch to toml
+    - add a viewer for pVDDT scored output map
 3.1.2 - add locscale 2.2.3
 3.1.1 - maintenance release
 3.1 - refactor to support locscale 2.1
