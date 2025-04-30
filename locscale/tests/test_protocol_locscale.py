@@ -100,5 +100,5 @@ class TestProtLocscale(BaseTest):
 
         #launchTest('noRef', vol=inputVol)  # requires CCP4
         #launchTest('volRef', vol=inputVol, volRef=volRef)  # TODO: test reference volume case
-        launchTest('pdbRef', vol=inputVol, pdbRef=pdbRef)
+        launchTest('pdbRef', vol=inputVol, pdbRef=pdbRef, useNN=False)
         launchTest('EMmerNet', vol=inputVol, useNN=True)

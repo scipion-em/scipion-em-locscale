@@ -25,9 +25,9 @@
 # **************************************************************************
 
 # Supported versions
-V2_1 = '2.1'
 V2_2_3 = '2.2.3'
-VERSIONS = [V2_1, V2_2_3]
+V2_3_0 = '2.3.0'
+VERSIONS = [V2_2_3, V2_3_0]
 LOCSCALE_DEFAULT_VER_NUM = VERSIONS[-1]
 
 DEFAULT_ENV_NAME = f"locscale-{LOCSCALE_DEFAULT_VER_NUM}"
@@ -38,3 +38,7 @@ LOCSCALE_ENV_ACTIVATION = 'LOCSCALE_ENV_ACTIVATION'
 REF_NONE = 0
 REF_PDB = 1
 REF_VOL = 2
+
+# viewer constants
+VOLUME_SLICES = 0
+VOLUME_CHIMERA = 1
