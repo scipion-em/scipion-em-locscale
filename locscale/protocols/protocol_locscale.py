@@ -44,6 +44,101 @@ class ProtLocScale(ProtFilterVolumes):
     """ This protocol computes contrast-enhanced cryo-EM maps
         by local amplitude scaling, optionally using a reference model.
     """
+    """
+        LocScale (ProtLocScale) — User Manual
+
+            Overview
+
+            The LocScale protocol performs local sharpening and contrast
+            enhancement of cryo-EM maps using amplitude scaling methods.
+            Its main purpose is to improve the interpretability of density
+            maps by enhancing high-resolution structural details while
+            preserving biologically meaningful signal across regions with
+            variable local resolution.
+
+            The protocol supports both classical reference-based local
+            scaling and neural network–assisted enhancement through
+            confidence-weighted EMmerNet prediction models. These approaches
+            allow users to obtain sharpened reconstructions suitable for
+            visualization, atomic modelling, and structural interpretation.
+
+            Inputs and General Workflow
+
+            The protocol requires an input cryo-EM volume, which should
+            preferably be unsharpened and unfiltered. If available, half
+            maps can also be processed independently. Depending on the
+            selected workflow, the protocol may additionally use a reference
+            atomic model, a reference volume, or no explicit reference.
+
+            In reference-based mode, the protocol generates locally scaled
+            maps by comparing the experimental reconstruction with the
+            reference information. Reference models may originate from
+            atomic structures or previously generated volumes. Optionally,
+            a binary mask can be provided to restrict the analysis to
+            biologically relevant regions and exclude solvent areas or noise.
+
+            In neural network prediction mode, the protocol uses EMmerNet-
+            based feature enhancement to improve both contrast and local
+            high-resolution detail. Confidence-weighted prediction is applied
+            to reduce the risk of hallucinated structural features and to
+            highlight regions that should be interpreted cautiously.
+
+            Local Sharpening and Scaling Strategy
+
+            The protocol performs local amplitude scaling rather than global
+            sharpening, allowing different regions of the map to be enhanced
+            according to their local structural quality. This strategy is
+            particularly important in cryo-EM datasets containing flexible
+            domains, heterogeneous conformations, or uneven local resolution.
+
+            When using reference-based scaling, the protocol supports
+            refinement workflows through REFMAC5 when CCP4 is available.
+            Symmetry information can also be incorporated to generate
+            symmetrized reference maps, improving consistency in highly
+            symmetric macromolecular assemblies.
+
+            The EMmerNet enhancement mode provides two prediction models
+            optimized for either high-context or low-context structural
+            environments. From a biological perspective, these models may
+            improve visualization of weak densities or flexible regions,
+            although confidence maps should always be considered during
+            interpretation to avoid overestimating uncertain features.
+
+            Outputs and Interpretation
+
+            After execution, the protocol produces a locally sharpened
+            cryo-EM volume with enhanced structural contrast. The output
+            map preserves the sampling rate of the original reconstruction
+            and can be directly used for visualization, model building,
+            validation, or downstream structural analysis.
+
+            In neural network mode, additional confidence-related outputs
+            may also be generated, helping users identify regions with
+            variable reliability or prediction certainty.
+
+            Practical Considerations
+
+            Local sharpening is most beneficial when cryo-EM maps exhibit
+            substantial local resolution variability. Reference-based scaling
+            is generally preferred when reliable structural models are
+            available, while neural network enhancement is particularly
+            useful for exploratory analysis or difficult datasets with weak
+            high-resolution signal.
+
+            Careful validation remains essential, especially in flexible or
+            poorly resolved regions. Excessive enhancement or inappropriate
+            references may introduce misleading structural features that
+            are not fully supported by the experimental data.
+
+            Final Perspective
+
+            ProtLocScale provides a flexible framework for improving cryo-EM
+            map interpretability through local amplitude scaling and feature
+            enhancement. By combining classical sharpening approaches with
+            modern neural network–assisted prediction, the protocol supports
+            more reliable structural interpretation across a wide range of
+            cryo-EM reconstruction scenarios.
+        """
     _label = 'local sharpening'
     _possibleOutputs = outputs
 
